@@ -3,161 +3,187 @@
  * Core/Controller.php
  *
  * The controller handles our main template and provides the
- * model and view functions which are the backbone of the system.
+ * model and view functions which are the backbone of the tempus
+ * project. Used to hold and keep track of many of the variables
+ * that support the applications execution.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
 
 namespace TempusProjectCore\Core;
 
-use TempusProjectCore\Classes\Debug as Debug;
-use TempusProjectCore\Classes\Config as Config;
-use TempusProjectCore\Classes\DB as DB;
+use TempusProjectCore\Classes\CustomException as CustomException;
+use TempusProjectCore\Classes\Pagination as Pagination;
+use TempusProjectCore\Functions\Docroot as Docroot;
 use TempusProjectCore\Classes\Session as Session;
 use TempusProjectCore\Classes\Cookie as Cookie;
-use TempusProjectCore\Classes\Log as Log;
+use TempusProjectCore\Classes\Config as Config;
 use TempusProjectCore\Classes\Check as Check;
+use TempusProjectCore\Classes\Debug as Debug;
+use TempusProjectCore\Classes\Token as Token;
 use TempusProjectCore\Classes\Input as Input;
 use TempusProjectCore\Classes\Email as Email;
-use TempusProjectCore\Classes\Pagination as Pagination;
 use TempusProjectCore\Classes\Issue as Issue;
 use TempusProjectCore\Classes\Hash as Hash;
-use TempusProjectCore\Classes\Token as Token;
-use TempusProjectCore\Classes\CustomException as CustomException;
+use TempusProjectCore\Classes\Log as Log;
+use TempusProjectCore\Classes\DB as DB;
 
 class Controller
 {
-    /////////////////////////////
-    // Main Template Variables //
-    /////////////////////////////
-    public  static $_title = null;
-    public  static $_page_description = null;
+    /////////////////////////
+    // Meta-data Variables //
+    /////////////////////////
+    protected static $pageDescription = null;
+    protected static $title = null;
 
     ///////////////////////////
     // Main Config Variables //
     ///////////////////////////
-    protected static $_cookie_name = null;
-    protected static $_session_name = null;
-    public static $_base = null;
-    public static $_location = null;
+    protected static $sessionPrefix = null;
+    protected static $cookiePrefix = null;
+    public static $location = null;
+    public static $base = null;
 
     ////////////////////////
     // Common Use Objects //
     ////////////////////////
-    protected static $_template = null;
-    protected static $_user = null;
-    protected static $_db = null;
-    protected static $_session = null;
-    protected static $_message = null;
-    protected static $_subscribe = null;
-    protected static $_group = null;
-    protected static $_log = null;
-    protected static $_blog = null;
-    protected static $_comment = null;
+    protected static $template = null;
+    protected static $content = null;
+    protected static $db = null;
 
     /////////////////////////
     // Main User Variables //
     /////////////////////////
-    protected static $_active_user = null;
-    protected static $_active_group = 0;
-    protected static $_is_logged_in = false;
-    protected static $_is_member = false;
-    protected static $_is_admin = false;
-    protected static $_is_mod = false;
-    protected static $_active_prefs = null;
-    protected static $_content = null;
-    public    static $_unread = null;
+    protected static $activeGroup = null;
+    protected static $activePrefs = null;
+    protected static $isLoggedIn = false;
+    protected static $activeUser = null;
+    protected static $isMember = false;
+    protected static $isAdmin = false;
+    protected static $isMod = false;
+
+    /////////////////
+    // TO BE MOVED //
+    /////////////////
+    public static $bugreport;
+    public static $subscribe;
+    public static $feedback;
+    public static $session;
+    public static $message;
+    public static $comment;
+    public static $group;
+    public static $user;
+    public static $blog;
+    public static $log;
 
     /**
-     * This is the constructor, we use this to populate some of our system assets.
+     * This is the constructor, we use this to populate some of our system
+     * variables needed for the application like; initiating the DB, loading
+     * the Template class, and storing any Issues from previous sessions
      */
     public function __construct()
     {
         Debug::group("Controller Constructor", 1);
-        Self::$_base = Config::get('main/base');
-        Self::$_location = Config::get('main/location');
-        Self::$_cookie_name = Config::get('remember/cookie_name');
-        Self::$_session_name = Config::get('session/session_name');
-        Self::$_db = DB::getInstance();
-        Self::$_template = new Template();
-        $success = Session::flash('success');
-        $notice = Session::flash('notice');
-        $error = Session::flash('error');
-        if (!empty($notice)) {
-            Issue::notice($notice);
-        }
-        if (!empty($error)) {
-            Issue::error($error);
-        }
-        if (!empty($success)) {
-            Issue::success($success);
-        }
+        Issue::checkSessions();
+        self::$base = Docroot::getAddress();
+        self::$location = Docroot::getFull();
+        self::$cookiePrefix = Config::get('cookie/cookiePrefix');
+        self::$sessionPrefix = Config::get('session/sessionPrefix');
+        self::$db = DB::getInstance();
+        self::$template = new Template();
+        self::$activeGroup = json_decode(file_get_contents(Docroot::getLocation('permissionsDefault')->fullPath), true);
+        self::$activePrefs = json_decode(file_get_contents(Docroot::getLocation('preferencesDefault')->fullPath));
+        
+        /**
+         * @todo  - This needs to be moved to TheTempusProject but that
+         * requires more rewriting than i wanted to do in this revision
+         * soooooo..... till next time folks!
+         */
+        self::$blog         = $this->model('blog');
+        self::$bugreport    = $this->model('bugreport');
+        self::$comment      = $this->model('comment');
+        self::$feedback     = $this->model('feedback');
+        self::$group        = $this->model('group');
+        self::$log          = $this->model('log');
+        self::$message      = $this->model('message');
+        self::$session      = $this->model('sessions');
+        self::$subscribe    = $this->model('subscribe');
+        self::$user         = $this->model('user');
+
         Debug::gend();
     }
-    
+
     /**
-     * This is the execution command. This function sets our template variables, 
-     * updates our session, and renders the page with all the final content.
+     * This is the build function. Here we set the final template variables
+     * before we render the entire page to the end user.
      */
     protected function build()
     {
-        Self::$_template->add_filter('ui', '#{UI}(.*?){/UI}#is', Issue::GetUI());
-        Self::$_template->set('CONTENT', Self::$_content);
-        Self::$_template->set('TITLE', Self::$_title);
-        Self::$_template->set('PAGE_DESCRIPTION', Self::$_page_description);
-        Self::$_template->set('MBADGE', Self::$_unread);
-        Self::$_template->set('NOTICE', Issue::GetNotice());
-        Self::$_template->set('SUCCESS', Issue::GetSuccess());
-        Self::$_template->set('ERROR', Issue::GetError());
-        Self::$_template->render();
+        Debug::info("Controller: Build Call");
+        self::$template->addFilter('ui', '#{UI}(.*?){/UI}#is', Issue::getUI());
+        self::$template->set('CONTENT', self::$content);
+        self::$template->set('TITLE', self::$title);
+        self::$template->set('PAGE_DESCRIPTION', self::$pageDescription);
+        self::$template->set('NOTICE', Issue::getNotice());
+        self::$template->set('SUCCESS', Issue::getSuccess());
+        self::$template->set('ERROR', Issue::getError());
+        self::$template->render();
     }
 
     /**
-     * Function for calling a new model.
-     *     
-     * @param  string $model - The name of the model you are calling.
-     * @param  wild $data - Any data the model may need when instantiated.
-     * 
-     * @return object 
+     * Function for initiating a new model.
+     *
+     * @param  wild     $data  - Any data the model may need when instantiated.
+     * @param  string   $modelName - The name of the model you are calling.
+     *                           ('.', and '_' are valid delimiters and the 'model_'
+     *                           in the file name is not required)
+     *
+     * @return object          - The model object.
      */
-    protected function model($model, $data = null)
+    protected function model($modelName)
     {
-        $new_model = str_replace('.', '_', $model);
-        $path = Self::$_location . 'Models/model_'.$new_model.'.php';
-        if (is_file($path)) {
-            Debug::group("Model: $new_model", 1);
-            Debug::log("Requiring Model");
-            require_once $path;
-            $new_model_2 = APP_SPACE . "\\Models\\" . 'model_' . $new_model;
-            Debug::log("Calling Model");
-            return new $new_model_2($data);
+        Debug::group("Model: $modelName", 1);
+        $docLocation = Docroot::getLocation('models', $modelName);
+        if ($docLocation->error) {
+            new CustomException('model', $docLocation->errorString);
         } else {
-            new CustomException('model', $model);
+            Debug::log("Requiring model");
+            require_once $docLocation->fullPath;
+            Debug::log("Instantiating model");
+            $model = new $docLocation->className;
+        }
+        Debug::gend();
+        if (isset($model)) {
+            return $model;
         }
     }
 
     /**
-     * This function adds a standard view to the main content 
+     * This function adds a standard view to the main {CONTENT}
      * section of the page.
      *
-     * NOTE: Everything unrelated to business logic and core 
-     * display should be passed through this method.
-     * 
-     * @param  String   $view - The name of the view being called.
-     * @param  wild      $data - Any data to be used with the view.
+     * @param  string   $viewName - The name of the view being called.
+     * @param  wild     $data - Any data to be used with the view.
+     *
+     * @todo  add a check to this and an exception
      */
-    protected function view($view, $data = null)
+    protected function view($viewName, $data = null)
     {
         if (!empty($data)) {
-            Self::$_content .= Self::$_template->standard_view($view, $data);
+            $out = self::$template->standardView($viewName, $data);
         } else {
-            Self::$_content .= Self::$_template->standard_view($view);
+            $out = self::$template->standardView($viewName);
+        }
+        if (!empty($out)) {
+            self::$content .= $out;
+        } else {
+            new CustomException('view', $viewName);
         }
     }
 }

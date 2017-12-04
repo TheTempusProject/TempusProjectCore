@@ -1,17 +1,17 @@
 <?php
 /**
- * Classes/Debug.php.
+ * Classes/Debug.php
  *
  * The Debug class is responsible for providing a log of relevant debugging information.
  * It has functionality to generate a log file as it goes allowing you to print it at any
  * given point in the script. It also acts as a portal for writing to a console output
  * using FirePHP.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -19,6 +19,7 @@
 namespace TempusProjectCore\Classes;
 
 use \FirePHP as FirePHP;
+
 class Debug
 {
     /**
@@ -26,29 +27,32 @@ class Debug
      *
      * @var bool
      */
-    private static $debug_status = false;
+    private static $debugStatus = false;
 
     /**
      * Very Important, this will enable the firebug console output.
      * It only applies when debugging is enabled, or the config cannot
      * be found as a safety net.
-     * 
+     *
      * @var bool
      */
     private static $console = false;
-    private static $error_trace = false;
-    private static $group = false;
+    private static $showLines = false;
+    private static $redirect = false;
+    private static $errorTrace = false;
+    private static $group = 0;
     private static $fire = null;
-    private static $debug_log = null;
+    private static $debugLog = null;
 
     /**
      * Acts as a constructor.
      */
-    private static function _start()
+    private static function startDebug()
     {
-        if (Self::$console) {
+        if (self::$console) {
             ob_start();
-            Self::$fire = FirePHP::getInstance(true);;
+            self::$fire = FirePHP::getInstance(true);
+            self::$fire->setOption('includeLineNumbers', self::$showLines);
         }
     }
 
@@ -57,11 +61,26 @@ class Debug
      *
      * @return bool
      */
-    public static function status()
+    public static function status($flag = null)
     {
-        return Self::$debug_status;
-    }
+        switch ($flag) {
+            case 'console':
+                return self::$console;
+                break;
 
+            case 'redirect':
+                return self::$redirect;
+                break;
+            
+            case 'trace':
+                return self::$errorTrace;
+                break;
+
+            default:
+                return self::$debugStatus;
+                break;
+        }
+    }
 
     /**
      * This is the interface that writes to our log file/console depending on input type.
@@ -73,54 +92,54 @@ class Debug
      */
     private static function put($type, $data = null, $params = null)
     {
-        if (!Self::$debug_status) {
+        if (!self::$debugStatus) {
             return;
         }
-        if (strlen(Self::$debug_log) > 50000) {
-            Self::$fire->log('Error log too large, possible loop.');
-            Self::$debug_status = false;
+        if (strlen(self::$debugLog) > 50000) {
+            self::$fire->log('Error log too large, possible loop.');
+            self::$debugStatus = false;
             return;
         }
         if (!is_object($data)) {
-            Self::$debug_log .= var_export($data, true);
-            Self::$debug_log .= '\n';
+            self::$debugLog .= var_export($data, true);
+            self::$debugLog .= '\n';
         } else {
-            Self::$debug_log .= 'cannot save objects';
-            Self::$debug_log .= '\n';
+            self::$debugLog .= 'cannot save objects';
+            self::$debugLog .= '\n';
         }
-        if (!Self::$console) {
+        if (!self::$console) {
             return;
         }
-        if (!Self::$fire) {
-            Self::_start();
+        if (!self::$fire) {
+            self::startDebug();
         }
         switch ($type) {
             case 'variable':
-                Self::$fire->info($data, $params);
+                self::$fire->info($data, $params);
                 break;
 
-            case 'group_end':
-                Self::$fire->groupEnd();
+            case 'groupEnd':
+                self::$fire->groupEnd();
                 break;
 
             case 'trace':
-                Self::$fire->trace($data);
+                self::$fire->trace($data);
                 break;
 
             case 'group':
                 if ($params) {
-                    Self::$fire->group($data, $params);
+                    self::$fire->group($data, $params);
                 } else {
-                    Self::$fire->group($data);
+                    self::$fire->group($data);
                 }
                 break;
 
             case 'info':
-                Self::$fire->$type('color: #1452ff', '%c' . $data);
+                self::$fire->$type('color: #1452ff', '%c' . $data);
                 break;
 
             default:
-                Self::$fire->$type($data);
+                self::$fire->$type($data);
                 break;
         }
     }
@@ -130,10 +149,27 @@ class Debug
      */
     public static function gend()
     {
-        Self::$group = false;
-        Self::put('group_end');
+        if (self::$group > 0) {
+            self::$group--;
+            self::put('groupEnd');
+        }
     }
-
+    /**
+     * Creates a group divider into the console output.
+     *
+     * @param string $data      name of the group
+     * @param wild   $collapsed if anything is present the group will be collapsed by default
+     */
+    public static function closeAllGroups()
+    {
+        if (self::$group > 0) {
+            while (self::$group > 0) {
+                self::$group--;
+                self::put('groupEnd');
+            }
+            // self::put('log', 'closed all groups.');
+        }
+    }
     /**
      * Creates a group divider into the console output.
      *
@@ -143,12 +179,12 @@ class Debug
     public static function group($data, $collapsed = null)
     {
         if (!empty($collapsed)) {
-            $params = array('Collapsed' => true);
-            Self::put('group', $data, $params);
+            $params = ['Collapsed' => true];
+            self::put('group', $data, $params);
         } else {
-            Self::put('group', $data);
+            self::put('group', $data);
         }
-        Self::$group = true;
+        self::$group++;
     }
     /**
      * Allows you to print the contents of any variable into the console.
@@ -161,7 +197,7 @@ class Debug
         if (!isset($data)) {
             $data = 'Default Variable label';
         }
-        Self::put('variable', $var, $data);
+        self::put('variable', $var, $data);
     }
 
     /**
@@ -171,9 +207,9 @@ class Debug
      */
     public static function log($data, $params = null)
     {
-        Self::put('log', $data);
+        self::put('log', $data);
         if (!empty($params)) {
-            Self::gend();
+            self::gend();
         }
     }
 
@@ -184,9 +220,9 @@ class Debug
      */
     public static function trace($data = 'Default Trace')
     {
-        Self::group("$data", 1);
-        Self::put('trace', $data);
-        Self::gend();
+        self::group("$data", 1);
+        self::put('trace', $data);
+        self::gend();
     }
 
     /**
@@ -196,9 +232,9 @@ class Debug
      */
     public static function info($data, $params = null)
     {
-        Self::put('info', $data);
+        self::put('info', $data);
         if (!empty($params)) {
-            Self::gend();
+            self::gend();
         }
     }
 
@@ -209,9 +245,9 @@ class Debug
      */
     public static function warn($data, $params = null)
     {
-        Self::put('warn', $data);
+        self::put('warn', $data);
         if (!empty($params)) {
-            Self::gend();
+            self::gend();
         }
     }
 
@@ -222,22 +258,20 @@ class Debug
      */
     public static function error($data, $params = null)
     {
-        Self::put('error', $data);
-        if (Self::$error_trace) {
-            Self::trace();
+        self::put('error', $data);
+        if (self::$errorTrace) {
+            self::trace();
         }
         if (!empty($params)) {
-            Self::gend();
+            self::gend();
         }
     }
 
     /**
-     * This returns the contents of the debug log.
-     *
-     * @return string - Returns the entire debug log.
+     * This var_dumps the contents of the debug log.
      */
     public static function dump()
     {
-        return var_dump(Self::$debug_log);
+        return var_dump(self::$debugLog);
     }
 }

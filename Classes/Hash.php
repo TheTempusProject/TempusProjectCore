@@ -1,14 +1,14 @@
 <?php
 /**
- * Classes/Hash.php.
+ * Classes/Hash.php
  *
- * This class is used to salt, hash, and check our passwords.
+ * This class is used to salt, hash, and check passwords.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -22,7 +22,7 @@ class Hash
      *
      * @param string $password - Validated password input.
      *
-     * @return string - Salted/hashed and ready to use password hash.
+     * @return string - salted/hashed and ready to use password hash.
      */
     public static function make($password)
     {

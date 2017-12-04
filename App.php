@@ -2,16 +2,16 @@
 /**
  * App.php
  *
- * This file parses any given url and separates it into controller, 
- * method, and data. This allows the application to direct the user 
- * to the desired location and provide the controller any additional 
- * information it may require.
+ * This file parses any given url and separates it into controller,
+ * method, and data. This allows the application to direct the user
+ * to the desired location and provide the controller any additional
+ * information it may require to run.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -20,79 +20,155 @@ namespace TempusProjectCore;
 
 use TempusProjectCore\Classes\Debug as Debug;
 use TempusProjectCore\Classes\Config as Config;
-use TempusProjectCore\Classes\CustomException as CustomException;
+use TempusProjectCore\Functions\Docroot as Docroot;
 use TempusProjectCore\Classes\Input as Input;
 
 class App
 {
     //Default Controller
-    protected $controller = 'home';
+    protected $controllerName = 'home';
+
     //Default Method
-    protected $method = 'index';
+    protected $methodName = 'index';
+
+    protected $controllerPath = null;
+    protected $indexPath = null;
+    protected $path = null;
+    protected $directed = false;
     protected $params = [];
+    protected $url = null;
 
-    public function __construct()
+    /**
+     * The constructor handles the entire process of parsing the url,
+     * finding the controller/method, and calling the appropriate
+     * class/function for the application.
+     *
+     * @param string $urlDirected     - A custom URL to be parsed to determine
+     *                                controller/method. (GET) url is used by
+     *                                default if none is provided
+     */
+    public function __construct($urlDirected = null)
     {
-        Debug::group('Main Application');
+        Debug::group('TPC Application');
         Debug::log("Class Initiated: " . __CLASS__);
-        $path = Config::get('main/location');
-        $url = $this->parseUrl();
 
-        ////////////////
-        // controller //
-        ////////////////
-        if (isset($url[0])) {
-            if (file_exists($path.'Controllers/' . $url[0] . '.php')) {
-                Debug::log("Modifying the controller from $this->controller to $url[0]");
-                $this->controller = strtolower($url[0]);
-                unset($url[0]);
-            } else {
-                 new CustomException('controller', $url[0]);
-                 unset($url[0]);
-            }
-        }
-        if (!is_file($path.'Controllers/'.$this->controller.'.php')) {
-            new CustomException('default_controller');
-        }
-        define('CORE_CONTROLLER', $this->controller);
-        Debug::log("Requiring Controller: $this->controller");
-        require_once $path.'Controllers/'. $this->controller . '.php';
-        $newController = APP_SPACE . "\\Controllers\\" . $this->controller;
+        // Set Default Controller Locations
+        $this->controllerPath = Docroot::getFull() . 'Controllers/';
+        $this->indexPath = Docroot::getFull();
 
-        /////////////
-        // Method: //
-        /////////////
-        if (isset($url[1])) {
-            if (method_exists($newController, $url[1])) {
-                Debug::log("Modifying the method from $this->method to $url[1]");
-                $this->method = strtolower($url[1]);
-                unset($url[1]);
-            } else {
-                new CustomException('method', $url[1]);
-                unset($url[1]);
-            }
+        // Set the application url to be used
+        if (!empty($urlDirected)) {
+            $this->directed = true;
+            $this->url = Docroot::parseUrl($urlDirected);
+        } else {
+            $this->url = Docroot::parseUrl();
         }
 
-        if (!method_exists($newController, $this->method)) {
-            new CustomException('default_method', $this->controller . "::" . $this->method);
-        }
-        define('CORE_METHOD', $this->method);
-        $this->params = $url ? array_values($url) : [];
-        Debug::log("Initiating controller: $this->controller");
-        $this->controller = new $newController();
-        Debug::log("Calling method : $this->method");
-        call_user_func_array([$this->controller, $this->method], $this->params);
+        // Find the Controller
+        $this->controllerName = $this->getController();
+        define('CORE_CONTROLLER', $this->controllerName);
+        $this->controllerNameFull = (string) APP_SPACE . '\\Controllers\\' . $this->controllerName;
+
+        // Ensure the controller is required
+        Debug::log("Requiring Controller: $this->controllerName");
+        require $this->path . $this->controllerName . '.php'; // docroot
+
+        // Find the Method
+        $this->methodName = $this->getMethod();
+        define('CORE_METHOD', $this->methodName);
+
+        /////////////////////////////////////////////////////////////////
+        // Load the appropriate Controller and Method which initiates  //
+        // the dynamic part of the application.                        //
+        /////////////////////////////////////////////////////////////////
+        $this->loadController();
+        $this->loadMethod();
+        Debug::gend();
     }
 
     /**
-     * This takes the url provided and returns it as an array.
-     * 
-     * @return  array   - The exploded $_GET URL.
+     * This is used to determine the method to be called in the controller class.
+     *
+     * NOTE: If $url is set, this function will automatically remove the first
+     * segment of the array regardless of whether or not it found the specified
+     * method.
+     *
+     * @return string   - The method name to be used by the application.
      */
-    public function parseUrl()
+    private function getMethod()
     {
-        if (Input::get('url')) {
-            return $url = explode('/', filter_var(rtrim(Input::get('url'), '/'), FILTER_SANITIZE_URL));
+        if (empty($this->url[0])) {
+            Debug::info('No Method Specified');
+            return $this->methodName;
         }
+        if (method_exists($this->controllerNameFull, $this->url[0])) {
+            Debug::log("Modifying the method from $this->methodName to " . $this->url[0]);
+            $out = array_shift($this->url);
+            return strtolower($out);
+        }
+        Debug::info('Method not found: ' . $this->url[0] . ', loading default.');
+        array_shift($this->url);
+        return $this->methodName;
+    }
+
+    /**
+     * Using the $url array, this function will define the controller
+     * name and path to be used. If the $urlDirected flag was used,
+     * the first location checked is the indexPath. If this does
+     * not exist, it will default back to the Controllers folder to search
+     * for the specified controller.
+     *
+     * NOTE: If $url is set, this function will automatically remove the first
+     * segment of the array regardless of whether or not it found the specified
+     * controller.
+     *
+     * @return string   - The controller name to be used by the application.
+     */
+    private function getController()
+    {
+        if (empty($this->url[0])) {
+            Debug::info('No Controller Specified.');
+            $this->path = $this->controllerPath; // docroot
+            return $this->controllerName;
+        }
+        if ($this->directed && file_exists($this->indexPath . $this->url[0] . '.php')) {
+            Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
+            $out = array_shift($this->url);
+            $this->path = $this->indexPath; // docroot
+            return strtolower($out);
+        }
+        if (!$this->directed && file_exists($this->controllerPath . $this->url[0] . '.php')) {
+            Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
+            $out = array_shift($this->url);
+            $this->path = $this->controllerPath; // docroot
+            return strtolower($out);
+        }
+        Debug::info('Could not locate specified controller: ' . $this->url[0]);
+        $this->path = $this->controllerPath; // docroot
+        array_shift($this->url);
+        return $this->controllerName;
+    }
+
+    /**
+     * This function Initiates the specified controller and
+     * stores it as an object in controllerObject.
+     */
+    private function loadController()
+    {
+        Debug::group("Initiating controller: $this->controllerName", 1);
+        $this->controllerObject = new $this->controllerNameFull;
+        Debug::gend();
+    }
+
+    /**
+     * This function calls the application method/function from the
+     * controllerObject.
+     */
+    private function loadMethod()
+    {
+        $this->params = $this->url ? array_values($this->url) : [];
+        Debug::group("Initiating method : $this->methodName", 1);
+        call_user_func_array([$this->controllerObject, $this->methodName], $this->params);
+        Debug::gend();
     }
 }

@@ -1,20 +1,20 @@
 # Tempus Project Core
+#### Framework Core Library
+###### Developer(s): Joey Kimsey
 
-Tempus project core is intended as the core code used by [The Tempus Project](https://github.com/joeyk4816/thetempusproject) which is a rapid prototyping framework. 
+TempusProjectCore is the foundational functionality used by [The Tempus Project](https://github.com/TheTempusProject/TheTempusProject) a rapid prototyping framework. There has been no clear effort to ensure this Library will function in stand-alone environments and there are no plans to do so at this time.
 
-The core functionality utilizes the MVC architecture in addition to a custom templating engine designed to make building web applications simple.
+This library utilizes the MVC architecture in addition to a custom templating engine designed to make building web applications simple. 
+
+**Notice: This code is in _still_ not production ready. This Library is provided as is, please use at your own risk.**
 
 ## Installation and Use
-This code is available as is and is no way guaranteed. This code is not created or intended to be used outside of The Tempus Project so has not been written to function without a folder structure resembling that in TheTempusProject as well as a .htaccess file that rewrites all traffic into a root index file.
-
-I may modify this package to be more friendly in the future as the code base expands, but it is currently not planned. 
-
 The easiest way to use TPC in your own application is to install and initialize it via composer.
 
 ```
 "require": {
 
-    "joeyk4816/tempus-project-core": "*",
+    "TheTempusProject/TempusProjectCore": "*",
 
 },
 
@@ -22,7 +22,7 @@ The easiest way to use TPC in your own application is to install and initialize 
 
     "psr-4": {
 
-        "TempusProjectCore\": "vendor/joeyk4816/tempus-project-core"
+        "TempusProjectCore\": "vendor/TheTempusProject/TempusProjectCore"
 
     }
 

@@ -4,42 +4,80 @@
  *
  * This class is used for manipulation of Images used by the application.
  *
- * @version 0.9
+ * @todo  - Add the config switches.
+ *          Create a generic uploads class
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @version 1.0
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
+ *
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
 
 namespace TempusProjectCore\Classes;
 
+use TempusProjectCore\Functions\Docroot as Docroot;
+
 class Image
 {
-    public static $last_upload = null;
-    public static function upload_image($data, $user)
+    public static $lastUpload = null;
+    public static $lastUploadLocation = null;
+
+    /**
+     * This function verifies a valid image upload, creates any
+     * necessary directories, moves, and saves, the image.
+     *
+     * @param  string $fieldname - The name of the input field for the upload.
+     * @param  string $folder - The sub-folder to store the uploaded image.
+     *
+     * @return boolean
+     *
+     * @todo  this folder stuff could be handled by the docroot function
+     */
+    public static function upload($fieldname, $folder)
     {
-        $uploaddir = Config::get('main/location') . 'Images/Uploads/' . $user . '/';
-        if(!Check::image_upload($data)) {
-            Debug::warn('Image Check Failed');
+        $uploaddir = Docroot::getLocation('imageUploadFolder', $folder)->fullPath;
+        if (!Check::imageUpload($fieldname)) {
+            Debug::error(Check::systemErrors());
             return false;
         }
+        // @todo Let's try and avoid 777 if possible
+        //       Try catch here for better error handling
         if (!file_exists($uploaddir)) {
+            Debug::Info('Creating Directory because it does not exist');
             mkdir($uploaddir, 0777, true);
-            Debug::Info('Creating Directory because it doesn\'t exist');
         }
-        $uploadfile = $uploaddir . basename($_FILES[$data]['name']);
-        Self::$last_upload = $_FILES[$data]['name'];
-        if (move_uploaded_file($_FILES[$data]['tmp_name'], $uploadfile)) {
+        self::$lastUpload = basename($_FILES[$fieldname]['name']);
+        self::$lastUploadLocation = $uploaddir . self::$lastUpload;
+        if (move_uploaded_file($_FILES[$fieldname]['tmp_name'], self::$lastUploadLocation)) {
             return true;
         } else {
             Debug::error('failed to move the file.');
             return false;
         }
     }
-    public static function last($username=null)
+
+    /**
+     * Returns the file location of the most recent
+     * uploaded image if one exists.
+     *
+     * @return string - The file location of the most recent uploaded image.
+     */
+    public static function lastLocation()
     {
-        return Self::$last_upload;
+        return self::$lastUploadLocation;
+    }
+    
+    /**
+     * Returns the name of the most recent
+     * uploaded image if one exists.
+     *
+     * @return string - The filename of the most recent uploaded image.
+     */
+    public static function last()
+    {
+        return self::$lastUpload;
     }
 }

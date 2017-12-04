@@ -1,115 +1,121 @@
 <?php
 /**
- * Classes/Config.php.
+ * Classes/Config.php
  *
- * This class handles all config settings. It will automatically default if
- * settings.php is not found in the /App/ folder from the root directory.
+ * This class handles all the hard-coded configuration.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
 
 namespace TempusProjectCore\Classes;
 
+use TempusProjectCore\Functions\Docroot as Docroot;
+
 class Config
 {
-    private static $_config = null;
+    private static $override = false;
+    private static $config = false;
+    private static $configNew = null;
+    private static $configLocation = null;
+    private static $configLocationDefault = null;
 
     /**
-     * Updates the Settings file.
+     * Loads default location and default values as well as setting
+     * the config to be used by the application.
+     *
+     * NOTE: This function will reload the config array from the
+     * config.json every time it is used.
+     *
+     * @return boolean - true
      */
-    public static function update()
+    private static function load()
     {
-        $path = Self::get('main/location').'App/settings.php';
-        if (!is_file($path)) {
-            Debug::error('No settings file.');
-            return;
-        }
-        $test = file_get_contents($path);
-        if (Input::exists('name')) {
-            if (Check::data_string(Input::post('name'))) {
-                $find = '#"name" => "(.*?)",#is';
-                $replace = '"name" => "'.Input::post('name').'",';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['main']['name'] = Input::post('name');
-            }
-        }
-        if (Input::exists('template')) {
-            if (Check::nospace(Input::post('template'))) {
-                $find = '#"template" => "(.*?)",#is';
-                $replace = '"template" => "'.Input::post('template').'",';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['main']['template'] = Input::post('template');
-            }
-        }
-        if (Input::exists('login_limit')) {
-            if (Check::ID(Input::post('login_limit'))) {
-                $find = '#"loginLimit" => (.*?),#is';
-                $replace = '"loginLimit" => '.Input::post('login_limit').',';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['main']['loginLimit'] = Input::post('login_limit');
-            }
-        }
-        if (Input::exists('log_F')) {
-            if (Check::tf(Input::post('log_F'))) {
-                $find = '#"feedback" => (.*?),#is';
-                $replace = '"feedback" => '.Input::post('log_F').',';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['logging']['feedback'] = Input::post('log_F');
-            }
-        }
-        if (Input::exists('log_L')) {
-            if (Check::tf(Input::post('log_L'))) {
-                $find = '#"logins" => (.*?),#is';
-                $replace = '"logins" => '.Input::post('log_L').',';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['logging']['logins'] = Input::post('log_L');
-            }
-        }
-        if (Input::exists('log_E')) {
-            if (Check::tf(Input::post('log_E'))) {
-                $find = '#"errors" => (.*?),#is';
-                $replace = '"errors" => '.Input::post('log_E').',';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['logging']['errors'] = Input::post('log_E');
-            }
-        }
-        if (Input::exists('log_BR')) {
-            if (Check::tf(Input::post('log_BR'))) {
-                $find = '#"bug_reports" => (.*?),#is';
-                $replace = '"bug_reports" => '.Input::post('log_BR').',';
-                $test = preg_replace($find, $replace, $test);
-                Self::$_config['logging']['bug_reports'] = Input::post('log_BR');
-            }
-        }
-        file_put_contents($path, $test);
+        self::$config = self::getConfig();
+        return true;
     }
 
     /**
-     * Retrieves the global config for $input.
+     * Returns the config array as its currently saved.
      *
-     * @param string $data - Must be in array/element format!
+     * Order or retrieval:
+     *  - App/config.json
+     *  - App/config_default.json
+     *  - Config::$configNew
      *
-     * @return WILD|null - Depending on the requested array, various returns are possible, null if not found.
+     * @return array - The config array.
+     */
+    public static function getConfig()
+    {
+        $docLocation = Docroot::getLocation('appConfig');
+        if ($docLocation->error) {
+            $docLocation = Docroot::getLocation('appConfigDefault');
+            if ($docLocation->error) {
+                $docLocation = Docroot::getLocation('configDefault');
+            }
+        }
+        return json_decode(file_get_contents($docLocation->fullPath), true);
+    }
+
+    /**
+     * Retrieves the config option for $name.
      *
-     * @example Config::get('main/name') - Should return the name you have set in App/Core/Settings.php
+     * @param string $data - Must be in <category>/<option> format.
+     *
+     * @return WILD - Depending on the requested option, various returns
+     *                are possible; returns null if the option is not found.
+     *
+     * @example Config::get('main/name') - Should return the name you have set in App/Core/config.php
      */
     public static function get($name)
     {
-        if (Self::_start()) {
-            $data = explode('/', $name);
-            if (count($data) != 2) {
-                Debug::warn("Config not properly formatted: $name");
-                
-                return;
-            }
-            if (isset(Self::$_config[$data[0]][$data[1]])) {
-                return Self::$_config[$data[0]][$data[1]];
+        $data = explode('/', $name);
+        if (count($data) != 2) {
+            Debug::warn("Config not properly formatted: $name");
+            
+            return;
+        }
+        if (self::$config === false) {
+            self::load();
+        }
+        if (isset(self::$config[$data[0]][$data[1]])) {
+            return self::$config[$data[0]][$data[1]];
+        }
+        Debug::warn("Config not found: $name");
+
+        return;
+    }
+    /**
+     * Retrieves the config option for $name.
+     *
+     * @param string $data - Must be in <category>/<option> format.
+     *
+     * @return WILD - Depending on the requested option, various returns
+     *                are possible; returns null if the option is not found.
+     *
+     * @example Config::get('main/name') - Should return the name you have set in App/Core/config.php
+     */
+    public static function getString($name)
+    {
+        $data = explode('/', $name);
+        if (count($data) != 2) {
+            Debug::warn("Config not properly formatted: $name");
+            
+            return;
+        }
+        if (self::$config === false) {
+            self::load();
+        }
+        if (isset(self::$config[$data[0]][$data[1]])) {
+            if (is_bool(self::$config[$data[0]][$data[1]])) {
+                return (self::$config[$data[0]][$data[1]] ? 'true' : 'false');
+            } else {
+                return self::$config[$data[0]][$data[1]];
             }
         }
         Debug::warn("Config not found: $name");
@@ -118,32 +124,146 @@ class Config
     }
 
     /**
-     * Retrieves the config if it hasn't already been set.
+     * Saves the current $config array.
      *
-     * @return bool
+     * @param  boolean $default - Option flag to save default_config
+     *                            as well.
      */
-    private static function _start()
+    public static function saveConfig($default = false)
     {
-        if (isset(Self::$_config) && Self::$_config !== false) {
-            //Debug::log('Using preset local config.');
-
-            return true;
+        if (self::$config === false) {
+            self::load();
         }
+        if ($default) {
+            file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config));
+        }
+        file_put_contents(Docroot::getLocation('appConfig')->fullPath, json_encode(self::$config));
+    }
 
-        $fullArray = explode('/', $_SERVER['PHP_SELF']);
-        array_pop($fullArray);
-        $docroot = implode('/', $fullArray) . '/';
-        $path = $_SERVER['DOCUMENT_ROOT'] . $docroot . 'App/settings.php';
-        
-        if (file_exists($path)) {
-            Debug::log("Requiring Settings file");
+    /**
+     * Adds a new category to the $config array.
+     *
+     * @param string $name - The name of the new category.
+     *
+     * @todo  - check name.
+     */
+    public static function addConfigCategory($name)
+    {
+        if (self::$config === false) {
+            self::load();
+        }
+        if (isset(self::$config[$name])) {
+            Issue::error("Category already exists: $name");
+            return false;
+        }
+        self::$config[$name] = [];
+        return true;
+    }
+
+    /**
+     * Add a new config option for the specified category.
+     *
+     * NOTE: Use a default option when using this function to
+     * aid in failsafe execution.
+     *
+     * @param string $parent - The primary category to add the option to.
+     * @param string $name   - The name of the new option.
+     * @param wild   $value  - The desired value for the new option.
+     *
+     * @return boolean
+     */
+    public static function updateConfig($parent, $name, $value, $create = false, $save = false)
+    {
+        if (self::$config === false) {
+            self::load();
+        }
+        if (!isset(self::$config[$parent])) {
+            Debug::error("No such parent: $parent");
+            return false;
+        }
+        if (isset(self::$config[$parent][$name])) {
+            self::$config[$parent][$name] = $value;
         } else {
-            Debug::warn('No Global config found!');
-            Debug::info('Using Default Settings.');
-            $path = $_SERVER['DOCUMENT_ROOT'] . $docroot . 'Resources/default_settings.php';
+            if ($create) {
+                self::addConfig($parent, $name, $value);
+            } else {
+                Debug::error("Config not found.");
+                return false;
+            }
         }
-        require_once $path;
-        Self::$_config = $GLOBALS['config'];
+        if ($save) {
+            self::saveConfig();
+        }
+        return true;
+    }
+
+    /**
+     * Add a new config option for the specified category.
+     *
+     * NOTE: Use a default option when using this function to
+     * aid in failsafe execution.
+     *
+     * @param string $parent - The primary category to add the option to.
+     * @param string $name   - The name of the new option.
+     * @param wild   $value  - The desired value for the new option.
+     *
+     * @return boolean
+     */
+    public static function addConfig($parent, $name, $value)
+    {
+        if (self::$config === false) {
+            self::load();
+        }
+        if (!isset(self::$config[$parent])) {
+            Issue::error("No such parent: $parent");
+            return false;
+        }
+        if (isset(self::$config[$parent][$name])) {
+            Issue::error("Category already exists: $name");
+            return false;
+        }
+        self::$config[$parent][$name] = $value;
+        return true;
+    }
+
+    /**
+     * Generates and saves a new config.json and config.default.json
+     * based on Input variables if no other config file exists.
+     *
+     * @return boolean
+     */
+    public static function generateConfig()
+    {
+        $docLocation = Docroot::getLocation('appConfig');
+        if (!$docLocation->error) {
+            if (!self::$override) {
+                Debug::error('config file already exists');
+
+                return false;
+            }
+        }
+
+        $docLocation = Docroot::getLocation('appConfigDefault');
+        if ($docLocation->error) {
+            $docLocation = Docroot::getLocation('configDefault');
+        }
+
+        self::$config = json_decode(file_get_contents($docLocation->fullPath), true);
+        self::updateConfig('main', 'name', Input::postNull('siteName'), true);
+        self::updateConfig('main', 'loginLimit', 5, true);
+        self::updateConfig('main', 'pageLimit', 50, true);
+        self::updateConfig('uploads', 'files', true, true);
+        self::updateConfig('uploads', 'images', true, true);
+        self::updateConfig('uploads', 'maxFileSize', 5000000, true);
+        self::updateConfig('uploads', 'maxImageSize', 500000, true);
+        self::updateConfig('database', 'dbHost', Input::postNull('dbHost'), true);
+        self::updateConfig('database', 'dbUsername', Input::postNull('dbUsername'), true);
+        self::updateConfig('database', 'dbPassword', Input::postNull('dbPassword'), true);
+        self::updateConfig('database', 'dbName', Input::postNull('dbName'), true);
+        self::updateConfig('database', 'dbEnabled', true, true);
+        self::updateConfig('database', 'dbMaxQuery', 100, true);
+        self::saveConfig(true);
+        Debug::info('config file generated successfully.');
 
         return true;
     }

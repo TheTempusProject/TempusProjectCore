@@ -1,0 +1,6 @@
+{
+    "timezone": "America/New_York",
+    "dateFormat": "F j, Y",
+    "timeFormat": "g:i:s A",
+    "pageLimit": 10
+}

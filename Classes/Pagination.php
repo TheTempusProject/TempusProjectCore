@@ -4,11 +4,11 @@
  *
  * This class is used to generate and manipulate pagination for our database interactions.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -18,16 +18,16 @@ namespace TempusProjectCore\Classes;
 class Pagination
 {
     //The settings that will not change
-    public static $pagination_settings = array();
+    public static $paginationSettings = [];
 
     //The instance for each generation
     public static $instance = null;
 
     //The total number of returned results.
-    private $_total_results = 0;
+    private $totalResults = 0;
 
     //The total number of pages for the results
-    private $_total_pages = 1;
+    private $totalPages = 1;
 
     /**
      * [__construct description]
@@ -37,73 +37,77 @@ class Pagination
      */
     private function __construct($start, $end, $total)
     {
-        if (empty(Self::$pagination_settings['limit'])) {
-            $this->load_settings();
+        if (empty(self::$paginationSettings['limit'])) {
+            $this->loadSettings();
         }
 
         //check for user settings
-        if (empty(Self::$pagination_settings['per_page'])) {
-            Self::$pagination_settings['per_page'] = Config::get('main/page_default');
-            if ((!empty(Self::$pagination_settings['user_per_page'])) && (Self::$pagination_settings['user_per_page'] <= Self::$pagination_settings['max_per_page'])) {
-                Self::$pagination_settings['per_page'] = Self::$pagination_settings['user_per_page'];
+        if (empty(self::$paginationSettings['perPage'])) {
+            self::$paginationSettings['perPage'] = Config::get('main/pageDefault');
+            if ((!empty(self::$paginationSettings['userPerPage'])) && (self::$paginationSettings['userPerPage'] <= self::$paginationSettings['maxPerPage'])) {
+                self::$paginationSettings['perPage'] = self::$paginationSettings['userPerPage'];
             }
         }
 
         // The query minimum and maximum based on current page and page limit
-        if (Self::$pagination_settings['current_page'] == 1) {
-            Self::$pagination_settings['min'] = 0;
-            Self::$pagination_settings['max'] = Self::$pagination_settings['per_page'];
+        if (self::$paginationSettings['currentPage'] == 1) {
+            self::$paginationSettings['min'] = 0;
+            self::$paginationSettings['max'] = self::$paginationSettings['perPage'];
         } else {
-            Self::$pagination_settings['min'] = ((Self::$pagination_settings['current_page'] - 1) * Self::$pagination_settings['per_page']);
-            Self::$pagination_settings['max'] = Self::$pagination_settings['per_page'];
+            self::$paginationSettings['min'] = ((self::$paginationSettings['currentPage'] - 1) * self::$paginationSettings['perPage']);
+            self::$paginationSettings['max'] = self::$paginationSettings['perPage'];
         }
 
         // The query limit based on our settings here
-        Self::$pagination_settings['limit'] = array(Self::$pagination_settings['min'],Self::$pagination_settings['max']);
+        self::$paginationSettings['limit'] = [self::$paginationSettings['min'], self::$paginationSettings['max']];
     }
 
     /**
      * [load_settings description]
      * @return [type] [description]
      */
-    private static function load_settings()
+    private static function loadSettings()
     {
         Debug::log('Loading Pagination Settings.');
         // hard cap built into system for displaying results
-        Self::$pagination_settings['max_per_page'] = Config::get('main/page_limit');
+        self::$paginationSettings['maxPerPage'] = Config::get('main/pageLimit');
 
         // hard cap built into system retrieving results
-        Self::$pagination_settings['max_query'] = Config::get('database/db_max_query');
+        self::$paginationSettings['maxQuery'] = Config::get('database/dbMaxQuery');
 
         // Set max query to the lowest of the three settings since this will modify how many results are possible.
-        if (Self::$pagination_settings['max_query'] <= Self::$pagination_settings['max_per_page']) {
-            Self::$pagination_settings['max_per_page'] = Self::$pagination_settings['max_query'];
+        if (self::$paginationSettings['maxQuery'] <= self::$paginationSettings['maxPerPage']) {
+            self::$paginationSettings['maxPerPage'] = self::$paginationSettings['maxQuery'];
         }
 
-        // Check for results request to set/modify the per_page setting
+        // Check for results request to set/modify the perPage setting
         if (Input::exists("results")) {
-            if (Check::ID(Input::get("results"))){
-                if (Input::get("results") <= Self::$pagination_settings['max_per_page']) {
-                    Self::$pagination_settings['per_page'] = Input::get("results");
+            if (Check::ID(Input::get("results"))) {
+                if (Input::get("results") <= self::$paginationSettings['maxPerPage']) {
+                    self::$paginationSettings['perPage'] = Input::get("results");
                 }
             }
         }
+        if (empty(self::$paginationSettings['perPage'])) {
+            self::$paginationSettings['perPage'] = self::$paginationSettings['maxPerPage'];
+        }
+        
 
         // Check for pagination in get
         if (Input::exists("page")) {
-            if (Check::ID(Input::get("page"))){
-                Self::$pagination_settings['current_page'] = (int) Input::get("page");
+            if (Check::ID(Input::get("page"))) {
+                self::$paginationSettings['currentPage'] = (int) Input::get("page");
             } else {
-                Self::$pagination_settings['current_page'] = 1;
+                self::$paginationSettings['currentPage'] = 1;
             }
         } else {
-            Self::$pagination_settings['current_page'] = 1;
+            self::$paginationSettings['currentPage'] = 1;
         }
 
-        if ((Self::$pagination_settings['current_page'] - 3) > 1) {
-            Self::$pagination_settings['first_page'] = (Self::$pagination_settings['current_page'] - 2);
+        if ((self::$paginationSettings['currentPage'] - 3) > 1) {
+            self::$paginationSettings['firstPage'] = (self::$paginationSettings['currentPage'] - 2);
         } else {
-            Self::$pagination_settings['first_page'] = 1;
+            self::$paginationSettings['firstPage'] = 1;
         }
     }
 
@@ -122,26 +126,26 @@ class Pagination
             $start = 0;
         }
         if (empty($end)) {
-            $end = Config::get('main/page_default');
+            $end = Config::get('main/pageDefault');
         }
         if (empty($total)) {
             $total = 0;
         }
         Debug::log('Creating new Pagination Instance.');
-        Self::$instance = new Self($start, $end, $total);
-        return Self::$instance;
+        self::$instance = new self($start, $end, $total);
+        return self::$instance;
     }
 
     /**
-     * [update_prefs description]
-     * @param  [type] $page_limit [description]
+     * [updatePrefs description]
+     * @param  [type] $pageLimit [description]
      * @return [type]             [description]
      */
-    public static function update_prefs($page_limit)
+    public static function updatePrefs($pageLimit)
     {
-        if (Check::ID($page_limit)) {
+        if (Check::id($pageLimit)) {
             Debug::log('Pagination: Updating user pref');
-            Self::$pagination_settings['user_per_page'] = $page_limit;
+            self::$paginationSettings['userPerPage'] = $pageLimit;
         } else {
             Debug::info('Pagination: User pref update failed.');
         }
@@ -153,8 +157,8 @@ class Pagination
      */
     public static function getMin()
     {
-        if (isset(Self::$pagination_settings['min'])) {
-            return Self::$pagination_settings['min'];
+        if (isset(self::$paginationSettings['min'])) {
+            return self::$paginationSettings['min'];
         } else {
             Debug::info('Pagination: Min not found');
         }
@@ -166,8 +170,8 @@ class Pagination
      */
     public static function perPage()
     {
-        if (!empty(Self::$pagination_settings['per_page'])) {
-            return Self::$pagination_settings['per_page'];
+        if (!empty(self::$paginationSettings['perPage'])) {
+            return self::$paginationSettings['perPage'];
         }
     }
 
@@ -177,8 +181,8 @@ class Pagination
      */
     public static function getMax()
     {
-        if (!empty(Self::$pagination_settings['max'])) {
-            return Self::$pagination_settings['max'];
+        if (!empty(self::$paginationSettings['max'])) {
+            return self::$paginationSettings['max'];
         } else {
             Debug::info('Pagination: Max not found');
         }
@@ -190,8 +194,8 @@ class Pagination
      */
     public static function firstPage()
     {
-        if (!empty(Self::$pagination_settings['first_page'])) {
-            return Self::$pagination_settings['first_page'];
+        if (!empty(self::$paginationSettings['firstPage'])) {
+            return self::$paginationSettings['firstPage'];
         } else {
             Debug::info('Pagination: Max not found');
         }
@@ -203,8 +207,8 @@ class Pagination
      */
     public static function lastPage()
     {
-        if (!empty(Self::$pagination_settings['last_page'])) {
-            return Self::$pagination_settings['last_page'];
+        if (!empty(self::$paginationSettings['lastPage'])) {
+            return self::$paginationSettings['lastPage'];
         } else {
             Debug::info('Pagination: Max not found');
         }
@@ -216,8 +220,8 @@ class Pagination
      */
     public static function totalPages()
     {
-        if (!empty(Self::$pagination_settings['total_pages'])) {
-            return Self::$pagination_settings['total_pages'];
+        if (!empty(self::$paginationSettings['totalPages'])) {
+            return self::$paginationSettings['totalPages'];
         } else {
             Debug::info('Pagination: Max not found');
         }
@@ -228,16 +232,19 @@ class Pagination
      * @param  [type] $results [description]
      * @return [type]          [description]
      */
-    public static function update_results($results)
+    public static function updateResults($results)
     {
-        if (Check::ID($results)) {
+        if (empty(self::$paginationSettings)) {
+            self::generate();
+        }
+        if (Check::id($results)) {
             Debug::log('Pagination: Updating results count');
-            Self::$pagination_settings['results'] = $results;
-            Self::$pagination_settings['total_pages'] = ceil((Self::$pagination_settings['results'] / Self::$pagination_settings['per_page']));
-            if ((Self::$pagination_settings['current_page'] + 3) < Self::$pagination_settings['total_pages']) {
-                Self::$pagination_settings['last_page'] = Self::$pagination_settings['current_page'] + 3;
+            self::$paginationSettings['results'] = $results;
+            self::$paginationSettings['totalPages'] = ceil((self::$paginationSettings['results'] / self::$paginationSettings['perPage']));
+            if ((self::$paginationSettings['currentPage'] + 3) < self::$paginationSettings['totalPages']) {
+                self::$paginationSettings['lastPage'] = self::$paginationSettings['currentPage'] + 3;
             } else {
-                Self::$pagination_settings['last_page'] = Self::$pagination_settings['total_pages'];
+                self::$paginationSettings['lastPage'] = self::$paginationSettings['totalPages'];
             }
         } else {
             Debug::info('Pagination: results update failed.');
@@ -250,10 +257,10 @@ class Pagination
      */
     public static function currentPage()
     {
-        if (!empty(Self::$pagination_settings['current_page'])) {
-            return Self::$pagination_settings['current_page'];
+        if (!empty(self::$paginationSettings['currentPage'])) {
+            return self::$paginationSettings['currentPage'];
         } else {
-            Debug::info('Pagination: current_page not found');
+            Debug::info('Pagination: currentPage not found');
         }
     }
 }

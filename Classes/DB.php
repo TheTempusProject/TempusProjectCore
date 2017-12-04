@@ -1,16 +1,16 @@
 <?php
 /**
- * Classes/DB.php.
+ * Classes/DB.php
  *
- * The DB class defines all our interactions with the database. This particular 
- * db interface uses PDO so it can have a wide variety of flexibility, currently 
+ * The DB class defines all our interactions with the database. This particular
+ * db interface uses PDO so it can have a wide variety of flexibility, currently
  * it is setup specifically with mysql.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -20,52 +20,67 @@ namespace TempusProjectCore\Classes;
 class DB
 {
     public static $instance = null;
-    private static $_enabled = null;
-    private $_pdo = null;
-    private $_query = null;
-    private $_error = false;
-    private $_results = null;
-    private $_count = 0;
-    private $_max_query = 0;
-    private $_total_results = 0;
-    private $_pagination = null;
-
+    private $pdo = null;
+    private $query = null;
+    private $error = false;
+    private $results = null;
+    private $count = 0;
+    private $maxQuery = 0;
+    private $totalResults = 0;
+    private $pagination = null;
+    private $errorMessage = null;
+    
     /**
      * Automatically open the DB connection with settings from our global config.
      */
     private function __construct($host = null, $name = null, $user = null, $pass = null)
     {
         Debug::log('Class Initiated: '.get_class($this));
+        $this->error = false;
         if (isset($host) && isset($name) && isset($user) && isset($pass)) {
             try {
                 Debug::log('Attempting to connect to DB with supplied credentials.');
-                $this->_pdo = new \PDO('mysql:host='.$host.';dbname='.$name, $user, $pass);
+                $this->pdo = new \PDO('mysql:host='.$host.';dbname='.$name, $user, $pass);
             } catch (\PDOException $Exception) {
-                Self::$_enabled = false;
-                new CustomException('DB_connection', $Exception);
-                return;
+                $this->error = true;
+                $this->errorMessage = $Exception->getMessage();
             }
-            Self::$_enabled = true;
-            Debug::log('DB connection successful');
+        }
+        if (!self::enabled()) {
+            $this->error = true;
+            $this->errorMessage = 'Database disabled in config.';
+        }
+        if ($this->error === false) {
+            try {
+                Debug::log('Attempting to connect to DB with config credentials.');
+                $this->pdo = new \PDO('mysql:host='.Config::get('database/dbHost').';dbname='.Config::get('database/dbName'), Config::get('database/dbUsername'), Config::get('database/dbPassword'));
+            } catch (\PDOException $Exception) {
+                $this->error = true;
+                $this->errorMessage = $Exception->getMessage();
+            }
+        }
+        if ($this->error !== false) {
+            new CustomException('dbConnection', $this->errorMessage);
             return;
         }
-        if (!Self::enabled()) {
-            Debug::error("DB disabled.");
-            $this->_pdo = false;
-            return;
-        }
-        try {
-            Debug::log('Attempting to connect to DB with config credentials.');
-            $this->_pdo = new \PDO('mysql:host='.Config::get('database/db_host').';dbname='.Config::get('database/db_name'), Config::get('database/db_username'), Config::get('database/db_password'));
-        } catch (\PDOException $Exception) {
-            Self::$_enabled = false;
-            new CustomException('DB_connection', $Exception);
-            return;
-        }
-        $this->_max_query = Config::get('database/db_max_query');
-        Self::$_enabled = true;
+        $this->maxQuery = Config::get('database/dbMaxQuery');
+        // @TODO add a toggle for this
+        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         Debug::log('DB connection successful');
         return;
+    }
+
+    /**
+     * Checks whether the DB is enabled via the config file.
+     *
+     * @return bool - whether the db module is enabled or not.
+     */
+    public static function enabled()
+    {
+        if (Config::get('database/dbEnabled') === true) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -73,17 +88,15 @@ class DB
      *
      * @return function - Returns the PDO DB connection.
      */
-    public static function getInstance($host = null, $name = null, $user = null, $pass = null)
+    public static function getInstance($host = null, $name = null, $user = null, $pass = null, $new = false)
     {
-        if (isset($host) && isset($name) && isset($user) && isset($pass)) {
-            Debug::log('Creating new DB Connection.');
+        // used to force a new connection
+        if (!empty($host) && !empty($name) && !empty($user) && !empty($pass)) {
             self::$instance = new self($host, $name, $user, $pass);
         }
-        if (!isset(self::$instance)) {
-            Debug::log('Creating new DB Connection.');
+        if (empty(self::$instance) || $new) {
             self::$instance = new self();
         }
-
         return self::$instance;
     }
 
@@ -94,26 +107,80 @@ class DB
      */
     public function version()
     {
-        if (!Self::enabled()) {
+        $this->error = false;
+        if (!self::enabled()) {
+            $this->error = true;
+            $this->errorMessage = 'Database disabled';
             return false;
         }
-        $this->_error = false;
         $sql = 'select version()';
-        if ($this->_query = $this->_pdo->prepare($sql)) {
+        if ($this->query = $this->pdo->prepare($sql)) {
             try {
-                $this->_query->execute();
-            } catch (PDOException $Exception) {
-                Debug::warn('DB Version Error');
-                Debug::warn($this->_query->errorInfo());
-                $this->_error = true;
+                $this->query->execute();
+            } catch (\PDOException $Exception) {
+                $this->error = true;
+                $this->errorMessage = $Exception->getMessage();
+                Debug::error('DB Version Error');
+                Debug::error($this->errorMessage);
                 return false;
             }
-            return $this->_query->fetchColumn();
+            return $this->query->fetchColumn();
         }
 
         return false;
     }
 
+    /**
+     * This function resets the values used for creating or modifying tables.
+     * Essentially a cleaner function.
+     */
+    public function newQuery()
+    {
+        $this->tableBuff = null;
+        $this->queryBuff = null;
+        $this->fieldBuff = [];
+    }
+
+    /**
+     * Checks the database to see if the specified table exists.
+     *
+     * @param  string $name - The name of the table to check for.
+     *
+     * @return boolean
+     */
+    protected function tableExists($name)
+    {
+        $this->raw("SHOW TABLES LIKE '$name'");
+        if (!$this->error && $this->count === 0) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks first that the table exists, then checks if the specified
+     * column exists in the table.
+     *
+     * @param  string $table  - The table to search.
+     * @param  string $column - The column to look for.
+     *
+     * @return boolean
+     *
+     * @todo  - Is it necessary to check the current $fields list too?
+     */
+    protected function columnExists($table, $column)
+    {
+        if (!$this->tableExists($table)) {
+            return false;
+        }
+        $this->raw("SHOW COLUMNS FROM `$table` LIKE '$column'");
+        if (!$this->error && $this->count === 0) {
+            return false;
+        }
+
+        return true;
+    }
     /**
      * Execute a raw DB query.
      *
@@ -123,44 +190,27 @@ class DB
      */
     public function raw($data)
     {
-        if (!Self::enabled()) {
+        $this->error = false;
+        if (!self::enabled()) {
+            $this->error = true;
+            $this->errorMessage = 'Database disabled';
             return false;
         }
-        $this->_error = false;
-        $this->_query = $this->_pdo->prepare($data);
+        $this->query = $this->pdo->prepare($data);
         try {
-            $this->_query->execute();
-        } catch (PDOException $Exception) {
+            $this->query->execute();
+        } catch (\PDOException $Exception) {
+            $this->error = true;
+            $this->errorMessage = $Exception->getMessage();
             Debug::warn('DB Raw Query Error');
-            Debug::warn($this->_query->errorInfo());
-            $this->_error = true;
+            Debug::warn($this->errorMessage);
             return false;
         }
+        // @todo i think this will cause an error some circumstances
+        $this->count = $this->query->rowCount();
         return true;
     }
 
-    /**
-     * Checks whether the DB is enabled via the config file.
-     * 
-     * @return bool - whether the db module is enabled or not.
-     */
-    public static function enabled()
-    {
-        if (Self::$_enabled === false)
-        {
-            return false;
-        }
-        if (Self::$_enabled === true)
-        {
-            return true;
-        }
-        if (Config::get('database/db_enabled') === false) 
-        {
-            Self::$_enabled = false;
-            return false;
-        }
-        return true;
-    }
     /**
      * The actual Query function. This function takes our setup queries
      * and send them to the database. it then properly sets our instance
@@ -172,130 +222,145 @@ class DB
      *
      * @return object
      */
-    public function query($sql, $params = array())
+    public function query($sql, $params = [], $noFetch = false)
     {
-        $this->_error = false;
-        if ($this->_pdo === false) {
-            Debug::warn('DB Query Error');
-            $this->_error = true;
+        $this->error = false;
+        if ($this->pdo == false) {
+            Debug::warn('DB::query - no database connection established');
+            $this->error = true;
+            $this->errorMessage = 'DB::query - no database connection established';
             return $this;
         }
-        if ($this->_query = $this->_pdo->prepare($sql)) {
-            $x = 1;
-            $y = 0;
-            if (count($params)) {
-                foreach ($params as $param) {
-                    $this->_query->bindValue($x, $param);
-                    ++$x;
-                    ++$y;
-                }
+        $this->query = $this->pdo->prepare($sql);
+        if (!empty($params)) {
+            $x = 0;
+            foreach ($params as $param) {
+                $x++;
+                $this->query->bindValue($x, $param);
             }
-            try {
-                $this->_query->execute();
-            } catch (PDOException $Exception) {
-                Debug::warn('DB Query Error: ');
-                Debug::warn($this->_query->errorInfo());
-                $this->_error = true;
-            }
-            $this->_results = $this->_query->fetchAll(\PDO::FETCH_OBJ);
-            $this->_count = $this->_query->rowCount();
+        }
+        try {
+            $this->query->execute();
+        } catch (\PDOException $Exception) {
+            $this->error = true;
+            $this->errorMessage = $Exception->getMessage();
+            Debug::error('DB Query Error');
+            Debug::error($this->errorMessage);
+            return $this;
+        }
+        if ($noFetch === true) {
+            $this->results = null;
+            $this->count = 1;
+        } else {
+            $this->results = $this->query->fetchAll(\PDO::FETCH_OBJ);
+            $this->count = $this->query->rowCount();
         }
 
         return $this;
     }
+
     /**
      * The action function builds all of our SQL.
      *
      * @todo :  Clean this up.
-     * 
+     *
      * @param string $action    - The type of action being carried out.
-     * @param string $table     - The table being used.
+     * @param string $tableName - The table name being used.
      * @param array  $where     - The parameters for the action
      * @param string $by        - The key to sort by.
      * @param string $direction - The direction to sort the results.
      * @param array $limit      - The result limit of the query.
-     * 
+     *
      * @return bool
      */
-    public function action($action, $table, $where, $by = null, $direction = 'DESC', $req_limit = null)
+    public function action($action, $tableName, $where, $by = null, $direction = 'DESC', $reqLimit = null)
     {
-        if (!Self::enabled()) {
+        $this->error = false;
+        if (!self::enabled()) {
+            $this->error = true;
+            $this->errorMessage = 'Database disabled';
             return $this;
         }
-        $this->_error = false;
-        if (!empty($req_limit)) {
-            $limit = " LIMIT {$req_limit[0]},{$req_limit[1]}";
+        $whereCount = count($where);
+        if ($whereCount < 3) {
+            Debug::error('DB::action - Not enough arguments supplied for "where" clause');
+            $this->error = true;
+            $this->errorMessage = 'DB::action - Not enough arguments supplied for "where" clause';
+            return $this;
         }
-        $sql = "{$action} FROM {$table}";
-        if (count($where) >= 3) {
-            $operators = array('=', '>', '<', '>=', '<=', '!=', 'LIKE');
-            $operator = $where[1];
-            if (!in_array($operator, $operators)) {
-                return false;
+        if ($action == 'DELETE') {
+            $noFetch = true;
+        }
+        $sql = "{$action} FROM {$tableName} WHERE ";
+        $validOperators = ['=', '!=', '>', '<', '>=', '<=', 'LIKE'];
+        $validDelimiters = ['AND', 'OR'];
+        $values = [];
+        while ($whereCount > 2) {
+            $whereCount = $whereCount - 3;
+            $field = array_shift($where);
+            $operator = array_shift($where);
+            array_push($values, array_shift($where));
+            if (!in_array($operator, $validOperators)) {
+                Debug::error('DB::action - Invalid operator.');
+                $this->error = true;
+                $this->errorMessage = 'DB::action - Invalid operator.';
+                return $this;
             }
-            $field = $where[0];
-            $value = array($where[2]);
-            $sql .= " WHERE {$field} {$operator} ?";
-            $extras = array('AND', 'OR');
-            $extra = 3;
-            $vCount = 0;
-            if (isset($where[$extra])) {
-                while ($extra < count($where)) {
-                    if (in_array($where[$extra], $extras)) {
-                        ++$extra;
-                        $field = $where[$extra];
-                        ++$extra;
-                        $operator = $where[$extra];
-                        ++$extra;
-                        array_push($value, $where[$extra]);
-                        ++$vCount;
-                        if (in_array($operator, $operators)) {
-                            $w = ($extra - 3);
-                            $sql .= " {$where[$w]} {$field} {$operator} ?";
-                        }
-                        ++$extra;
-                    }
+            $sql .= "{$field} {$operator} ?";
+            if ($whereCount > 0) {
+                $delimiter = array_shift($where);
+                if (!in_array($delimiter, $validDelimiters)) {
+                    Debug::error('DB::action - Invalid delimiter.');
+                    $this->error = true;
+                    $this->errorMessage = 'DB::action - Invalid delimiter.';
+                    return $this;
                 }
+                $sql .= " {$delimiter} ";
+                $whereCount--;
             }
         }
         if (isset($by)) {
             $sql .= " ORDER BY {$by} {$direction}";
         }
-        $sql_pre_limit = $sql;
-        if (!empty($limit)) {
-            $sql .= $limit;
+        $sqlPreLimit = $sql;
+        if (!empty($reqLimit)) {
+            $sql .= " LIMIT {$reqLimit[0]},{$reqLimit[1]}";
         }
-        if (isset($value)) {
-            $error = $this->query($sql, $value)->error();
+        if (isset($values)) {
+            if (!empty($noFetch)) {
+                $error = $this->query($sql, $values, true)->error();
+            } else {
+                $error = $this->query($sql, $values)->error();
+            }
         } else {
             $error = $this->query($sql)->error();
         }
-        if (!$error) {
-            $this->_total_results = $this->_count;
-            if ($this->_count > $this->_max_query) {
-                Debug::warn('Query exceeded maximum results. Maximum allowed is ' . $this->_max_query);
-                if (!empty($limit)) {
-                    $new_limit = ($req_limit[0] + Pagination::perPage());
-                    $limit = " LIMIT {$req_limit[0]},{$new_limit}";
-                } else {
-                    $limit = " LIMIT 0," . Pagination::perPage();
-                }
-                $sql = $sql_pre_limit . $limit;
-                if (isset($value)) {
-                    $error = $this->query($sql, $value)->error();
-                } else {
-                    $error = $this->query($sql)->error();
-                }
-                if ($error) {
-                    Debug::warn('DB Action Error: ');
-                    Debug::warn($this->_query->errorInfo());
-                    return $this;
-                }
-            }
+        if ($error) {
+            Debug::warn('DB Action Error: ');
+            Debug::warn($this->errorMessage);
             return $this;
         }
-        Debug::warn('DB Action Error: ');
-        //Debug::warn($this->_query->errorInfo());
+        $this->totalResults = $this->count;
+        if ($this->count <= $this->maxQuery) {
+            return $this;
+        }
+        Debug::warn('Query exceeded maximum results. Maximum allowed is ' . $this->maxQuery);
+        if (!empty($limit)) {
+            $newLimit = ($reqLimit[0] + Pagination::perPage());
+            $limit = " LIMIT {$reqLimit[0]},{$newLimit}";
+        } else {
+            $limit = " LIMIT 0," . Pagination::perPage();
+        }
+        $sql = $sqlPreLimit . $limit;
+        if (isset($values)) {
+            $error = $this->query($sql, $values)->error();
+        } else {
+            $error = $this->query($sql)->error();
+        }
+        if ($error) {
+            Debug::warn('DB Action Error: ');
+            Debug::warn($this->errorMessage);
+        }
         return $this;
     }
 
@@ -307,24 +372,23 @@ class DB
      *
      * @return bool
      */
-    public function insert($table, $fields = array())
+    public function insert($table, $fields = [])
     {
         $keys = array_keys($fields);
-        $values = null;
-        $x = 1;
+        $valuesSQL = null;
+        $x = 0;
+        $keysSQL = implode('`, `', $keys);
         foreach ($fields as $value) {
-            $values .= '?';
+            $x++;
+            $valuesSQL .= '?';
             if ($x < count($fields)) {
-                $values .= ', ';
+                $valuesSQL .= ', ';
             }
-            ++$x;
         }
-        $sql = "INSERT INTO {$table} (`".implode('`, `', $keys)."`) VALUES ({$values})";
-        if (!$this->query($sql, $fields)->error()) {
+        $sql = "INSERT INTO {$table} (`".$keysSQL."`) VALUES ({$valuesSQL})";
+        if (!$this->query($sql, $fields, true)->error()) {
             return true;
         }
-        Debug::error('DB Insert error');
-        //Debug::warn($this->_query->errorInfo());
         return false;
     }
 
@@ -337,60 +401,22 @@ class DB
      *
      * @return bool
      */
-    public function update($table, $id, $fields = array())
+    public function update($table, $id, $fields = [])
     {
-        $set = null;
-        $x = 1;
+        $updateSQL = null;
+        $x = 0;
         foreach ($fields as $name => $value) {
-            $set .= "{$name} = ?";
+            $x++;
+            $updateSQL .= "{$name} = ?";
             if ($x < count($fields)) {
-                $set .= ', ';
+                $updateSQL .= ', ';
             }
-            ++$x;
         }
-        $sql = "UPDATE {$table} SET {$set} WHERE ID = {$id}";
-        if (!$this->query($sql, $fields)->error()) {
+        $sql = "UPDATE {$table} SET {$updateSQL} WHERE ID = {$id}";
+        if (!$this->query($sql, $fields, true)->error()) {
             return true;
         }
-        Debug::warn('DB Update error: ');
-        //Debug::warn($this->_query->errorInfo());
         return false;
-    }
-
-    /**
-     * Selects data from the database.
-     *
-     * @param string $table     - The table we wish to select from.
-     * @param string $where     - The criteria we wish to select.
-     * @param string $by        - The key we wish to order by.
-     * @param string $direction - The direction we wish to order the results.
-     *
-     * @return function
-     */
-    public function get($table, $where, $by = 'ID', $direction = 'DESC', $limit = null)
-    {
-        return $this->action('SELECT *', $table, $where, $by, $direction, $limit);
-    }
-    public function search($table, $column, $param) 
-    {
-        return $this->action('SELECT *', $table, array($column, 'LIKE', '%' . $param . '%'));
-    }
-    /**
-     * Selects data from the database and automatically builds the pagination filter for the results array.
-     *
-     * @param string $table     - The table we wish to select from.
-     * @param string $where     - The criteria we wish to select.
-     * @param string $by        - The key we wish to order by.
-     * @param string $direction - The direction we wish to order the results.
-     *
-     * @return function
-     */
-    public function get_paginated($table, $where, $by = 'ID', $direction = 'DESC', $limit = null)
-    {
-        $this->action('SELECT *', $table, $where, $by, $direction);
-        Pagination::update_results($this->_total_results);
-        $limit = array(Pagination::getMin(),Pagination::getMax());
-        return $this->action('SELECT *', $table, $where, $by, $direction, $limit);
     }
 
     /**
@@ -407,13 +433,174 @@ class DB
     }
 
     /**
-     * Function for returning the entire $_results array.
+     * Starts the object to create a new table if none already exists.
+     *
+     * NOTE: All tables created with this function will automatically
+     * have an 11 digit integer called ID added as a primary key.
+     *
+     * @param  string $name - The name of the table you wish to create.
+     *
+     * @return boolean
+     *
+     * @todo  - add a check for the name.
+     */
+    public function newTable($name, $addID = true)
+    {
+        if ($this->tableExists($name)) {
+            $this->tableBuff = null;
+            Debug::error("Table already exists: $name");
+
+            return false;
+        }
+        $this->newQuery();
+        $this->tableBuff = $name;
+        if ($addID === true) {
+            $this->addfield('ID', 'int', 11);
+        }
+
+        return true;
+    }
+
+    /**
+     * This function allows you to add a new field to be
+     * added to a previously specified table.
+     *
+     * @param  string  $name    - The name of the field to add
+     * @param  string  $type    - The type of field.
+     * @param  integer $length  - The maximum length value for the field.
+     * @param  boolean $null    - Whether or not the field can be null
+     * @param  string  $default - The default value to use for new entries if any.
+     * @param  string  $comment - DB comment for this field.
+     *
+     * @return boolean
+     *
+     * @todo  - add more error reporting and checks
+     *          use switch/cases?
+     */
+    public function addfield($name, $type, $length, $null = false, $default = null, $comment = '')
+    {
+        if (empty($this->tableBuff)) {
+            Debug::info("No Table set.");
+            
+            return false;
+        }
+        if ($this->columnExists($this->tableBuff, $name)) {
+            Debug::error("Column already exists: $this->tableBuff > $name");
+            
+            return false;
+        }
+        if ($null === true) {
+            $sDefault = " DEFAULT NULL";
+        } else {
+            $sDefault = " NOT NULL";
+            if (!empty($default)) {
+                $sDefault .= " DEFAULT '$default'";
+            }
+        }
+        if (!empty($length) && ctype_digit($length)) {
+            $sType = $type . '(' . $length . ')';
+        } else {
+            $sType = $type;
+        }
+        if (!empty($comment)) {
+            $sComment = " COMMENT '$comment'";
+        } else {
+            $sComment = '';
+        }
+        $this->fieldBuff[] = ' `' . $name . '` ' . $sType . $sDefault . $sComment;
+        return true;
+    }
+
+    /**
+     * Builds and executes a database query to to create a table
+     * using the current object's table name and fields.
+     *
+     * NOTE: By default: All tables have an auto incrementing primary key named 'ID'.
+     *
+     * @todo  - Come back and add more versatility here.
+     */
+    public function createTable()
+    {
+        $this->queryStatus = false;
+        if (empty($this->tableBuff)) {
+            Debug::info("No Table set.");
+            
+            return false;
+        }
+        if ($this->tableExists($this->tableBuff)) {
+            Debug::error("Table already exists: $this->tableBuff");
+
+            return false;
+        }
+        if (!empty($this->tableBuff)) {
+            $this->queryBuff .= "CREATE TABLE `$this->tableBuff` (";
+            $x = 0;
+            $y = count($this->fieldBuff);
+            while ($x < $y) {
+                $this->queryBuff .= $this->fieldBuff[$x];
+                $x++;
+                $this->queryBuff .= ($x < $y) ? ',' :  '';
+            }
+            $this->queryBuff .= ")  ENGINE=InnoDB DEFAULT CHARSET=latin1; ALTER TABLE `" . $this->tableBuff . "` ADD PRIMARY KEY (`ID`); ";
+            $this->queryBuff .= "ALTER TABLE `" . $this->tableBuff . "` MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Primary index value';";
+            $this->queryStatus = ($this->raw($this->queryBuff) ? true : false);
+        }
+    }
+
+    public function search($table, $column, $param)
+    {
+        return $this->action('SELECT *', $table, [$column, 'LIKE', '%' . $param . '%']);
+    }
+
+    /**
+     * Selects data from the database.
+     *
+     * @param string $table     - The table we wish to select from.
+     * @param string $where     - The criteria we wish to select.
+     * @param string $by        - The key we wish to order by.
+     * @param string $direction - The direction we wish to order the results.
+     *
+     * @return function
+     */
+    public function get($table, $where, $by = 'ID', $direction = 'DESC', $limit = null)
+    {
+        if ($where === '*') {
+            $where = ['ID', '>=', '0'];
+        }
+        return $this->action('SELECT *', $table, $where, $by, $direction, $limit);
+    }
+
+    /**
+     * Selects data from the database and automatically builds the pagination filter for the results array.
+     *
+     * @param string $table     - The table we wish to select from.
+     * @param string $where     - The criteria we wish to select.
+     * @param string $by        - The key we wish to order by.
+     * @param string $direction - The direction we wish to order the results.
+     *
+     * @return function
+     */
+    public function getPaginated($table, $where, $by = 'ID', $direction = 'DESC', $limit = null)
+    {
+        if ($where === '*') {
+            $where = ['ID', '>=', '0'];
+        }
+        $this->action('SELECT *', $table, $where, $by, $direction);
+        Pagination::updateResults($this->totalResults);
+        if (!is_array($limit)) {
+            $limit = [Pagination::getMin(), Pagination::getMax()];
+        }
+        return $this->action('SELECT *', $table, $where, $by, $direction, $limit);
+    }
+
+    /**
+     * Function for returning the entire $results array.
      *
      * @return array - Returns the current query's results.
      */
     public function results()
     {
-        return $this->_results;
+        return $this->results;
     }
 
     /**
@@ -423,7 +610,10 @@ class DB
      */
     public function first()
     {
-        return $this->_results[0];
+        if (!empty($this->results[0])) {
+            return $this->results[0];
+        }
+        return false;
     }
 
     /**
@@ -433,7 +623,7 @@ class DB
      */
     public function count()
     {
-        return $this->_count;
+        return $this->count;
     }
 
     /**
@@ -443,6 +633,27 @@ class DB
      */
     public function error()
     {
-        return $this->_error;
+        return $this->error;
+    }
+
+    /**
+     * Returns if there are errors with the current query or not.
+     *
+     * @return bool
+     */
+    public function errorMessage()
+    {
+        //$this->query->errorInfo();
+        return $this->errorMessage;
+    }
+
+    /**
+     * Returns the boolean status of the most recently executed query.
+     *
+     * @return boolean
+     */
+    public function getStatus()
+    {
+        return $this->queryStatus;
     }
 }

@@ -1,15 +1,15 @@
 <?php
 /**
- * Functions/Exception_Handler.php.
+ * Functions/ExceptionHandler.php
  *
  * This function coordinates with uncaught exceptions to channel
  * them into the debug log for the application.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -18,14 +18,17 @@ namespace TempusProjectCore\Functions;
 
 use TempusProjectCore\Classes\Debug as Debug;
 
-class Handler
+class ExceptionHandler
 {
     /**
-     * Our fall back exception handler.
+     * The fall-back exception handler.
      *
      * @param object $data - The uncaught exception object.
+     *
+     * @todo  - Account for the possibility of strings/arrays/objects/etc
+     *          and ensure you deal with each accordingly
      */
-    public static function Exception_Handler($data)
+    public static function exceptionHandler($data)
     {
         Debug::error("Caught Exception: $data");
     }

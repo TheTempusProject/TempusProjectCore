@@ -1,11 +1,11 @@
 {
     "name": "thetempusproject/tempusprojectcore",
     "type": "project",
-    "description": "Tempus project core is intended as the core code used by The Tempus Project which is a rapid prototyping framework. This core functionality utilizes the MVC architecture in addition to a custom templating engine designed to make building web applications simple.",
+    "description": "Tempus project core is intended as the core code used by The Tempus Project: a rapid prototyping framework. This library utilizes the MVC architecture in addition to a custom templating engine designed to make building web applications simple.",
     "license": "MIT",
     "minimum-stability": "dev",
     "keywords": ["templating","mvc","framework"],
-    "homepage": "https://TheTempusProject.com/core",
+    "homepage": "https://TheTempusProject.com/Core",
     "authors": [
         {
             "name": "Joey Kimsey",

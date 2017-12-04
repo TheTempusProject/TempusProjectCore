@@ -1,14 +1,14 @@
 <?php
 /**
- * Classes/Input.php.
+ * Classes/Input.php
  *
  * This class manages and returns GET, FILE, and POST variables.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey  Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -18,20 +18,20 @@ namespace TempusProjectCore\Classes;
 class Input
 {
     /**
-     * Checks to see if input exists in the order of POST, GET, FILE. 
+     * Checks to see if input exists in the order of POST, GET, FILE.
      * A default name value of "submit" is used if none is specified.
      *
      * @param string $data - Name of the desired input (default: 'submit')
      *
-     * @return bool
+     * @return boolean
      */
     public static function exists($data = 'submit')
     {
-        if (Self::post($data)) {
+        if (self::post($data)) {
             return true;
-        } elseif (Self::get($data)) {
+        } elseif (self::get($data)) {
             return true;
-        } elseif (Self::file($data)) {
+        } elseif (self::file($data)) {
             return true;
         } else {
             Debug::info('Input::exists: No input Found');
@@ -41,12 +41,12 @@ class Input
     }
 
     /**
-     * Checks for a files existance and that it is not null
-     * then rturns its falue or bool false if none is found
+     * Checks for a files existence and that it is not null
+     * then returns its value or bool false if none is found
      *
      * @param string $data - Name of desired $_FILES value.
      *
-     * @return bool|string - Returns false if not found and a string if found.
+     * @return boolean|string - Returns false if not found and a string if found.
      */
     public static function file($data)
     {
@@ -70,7 +70,7 @@ class Input
      *
      * @param string $data - Name of desired $_POST value.
      *
-     * @return bool|string - Returns false if not found and a string if found.
+     * @return boolean|string - Returns false if not found and a string if found.
      */
     public static function post($data)
     {
@@ -96,7 +96,7 @@ class Input
      *
      * @return string
      */
-    public static function post_null($data)
+    public static function postNull($data)
     {
         if (!isset($_POST[$data])) {
             Debug::info("Input - post : $data not found.");
@@ -117,7 +117,7 @@ class Input
      *
      * @param string $data - Name of desired $_GET value.
      *
-     * @return bool|string - Returns false if not found and a string if found.
+     * @return boolean|string - Returns false if not found and a string if found.
      */
     public static function get($data)
     {

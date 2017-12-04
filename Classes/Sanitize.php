@@ -4,11 +4,11 @@
  *
  * This class is used to sanitize user input.
  *
- * @version 0.9
+ * @version 1.0
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -19,23 +19,22 @@ class Sanitize
 {
     /**
      * This function strips all html tags except for p/a/br from the given string.
-     * 
+     *
      * @param  String $data - The string to be parsed
-     * 
+     *
      * @return string   - The sanitized string.
      */
-    public static function content_short($data)
+    public static function contentShort($data)
     {
-        $out = strip_tags($data, '<p><a><br>');
-        return $out;
+        return strip_tags($data, '<p><a><br>');
     }
 
     /**
-     * This function is solely to remove $'s from the rich HTML editor 
+     * This function is to remove $'s and brackets from the rich HTML editor
      * which are the only parts that cause parse issues
-     * 
+     *
      * @param  String $data - The string to be parsed
-     * 
+     *
      * @return string   - The sanitized string.
      */
     public static function rich($data)

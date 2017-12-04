@@ -1,14 +1,16 @@
 <?php
 /**
- * Classes/Code.php.
+ * Classes/Code.php
  *
- * This class is used for manipulation of custom-codes used by the application.
+ * This class is used for creation of custom codes used by the application.
  *
- * @version 0.9
+ * @todo    Better code generation.
  *
- * @author  Joey Kimsey <joeyk4816@gmail.com>
+ * @version 1.0
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
+ *
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
@@ -22,7 +24,7 @@ class Code
      *
      * @return string
      */
-    public static function new_confirmation()
+    public static function genConfirmation()
     {
         $code = md5(uniqid());
         Debug::log("Code Generated: Confirmation: $code");
@@ -34,7 +36,7 @@ class Code
      *
      * @return string
      */
-    public static function new_token()
+    public static function genToken()
     {
         $code = md5(uniqid());
         Debug::log("Code Generated: Token: $code");

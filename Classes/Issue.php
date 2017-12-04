@@ -1,18 +1,18 @@
 <?php
 /**
- * Classes/Issue.php.
+ * Classes/Issue.php
  *
  * This class is used to parse, store, and return application feedback for the front end.
  *
- * @version 0.9
+ * @todo Check and filter all inputs.
  *
- * @author  Joey  Kimsey <joeyk4816@gmail.com>
+ * @version 1.0
  *
- * @link    https://github.com/JoeyK4816/tempus-project-core
+ * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
+ *
+ * @link    https://TheTempusProject.com/Core
  *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
- *
- * @todo Check and filter all inputs.
  */
 
 namespace TempusProjectCore\Classes;
@@ -21,119 +21,143 @@ use TempusProjectCore\Core\Template as Template;
 
 class Issue
 {
-    private static $_success = null;
-    private static $_error = null;
-    private static $_notice = null;
-    private static $_ui = false;
-
+    private static $success = null;
+    private static $error = null;
+    private static $notice = null;
+    private static $ui = false;
+    private static $sessionCheck = false;
+    
     /**
-     * This is the function that allows us to issue an error message to 
+     * This is the function that allows us to issue an error message to
      * be used by the template engine before final rendering.
-     * 
-     * NOTE: Errors may interfere with execution of the 
-     * application but shall not be issued by core failures 
+     *
+     * NOTE: Errors may interfere with execution of the
+     * application but shall not be issued by core failures
      * which shall be handled by the Custom_Exception class.
-     * 
-     * @param  string $data The message to be issued.
-     * 
+     *
+     * @param  string $error - The message to be issued.
+     *
      * @return NULL
      */
-    public static function error($data)
+    public static function error($error, $list = null)
     {
-        Self::$_ui = true;
-        if (!isset(Self::$_error))
-        {
-            Self::$_error = '<div class="alert alert-danger" role="alert">';
+        self::$ui = true;
+        if (!isset(self::$error)) {
+            self::$error = '<div class="alert alert-danger" role="alert">';
         } else {
-            Self::$_error = str_replace('</div>', '<br>', Self::$_error);
+            self::$error = str_replace('</div>', '<br>', self::$error);
         }
-        $output = Template::parse(Sanitize::rich($data));
-        Self::$_error .= $output.'</div>';
+        $output = Template::parse(Sanitize::rich($error));
+        self::$error .= $output;
+        $out = null;
+        if (is_array($list)) {
+            $out .= "<ul>";
+            foreach ($list as $key) {
+                Debug::error($key);
+                $out .= "<li>" . $key['errorInfo'] . "</li>";
+            }
+            $out .= "</ul>";
+        }
+        self::$error .= $out . '</div>';
     }
 
     /**
-     * This is the function that allows us to issue a warning message to 
+     * This is the function that allows us to issue a warning message to
      * be used by the template engine before final rendering.
-     * 
-     * NOTE: Notices shall not interfere with execution of the 
+     *
+     * NOTE: Notices shall not interfere with execution of the
      * application.
-     * 
+     *
      * @param  string $data The message to be issued.
-     * 
+     *
      * @return NULL
      */
     public static function notice($data)
     {
-        Self::$_ui = true;
-        if (!isset(Self::$_notice))
-        {
-            Self::$_notice = '<div class="alert alert-warning" role="alert">';
+        self::$ui = true;
+        if (!isset(self::$notice)) {
+            self::$notice = '<div class="alert alert-warning" role="alert">';
         } else {
-            Self::$_notice = str_replace("</div>", "<br>", Self::$_notice);
+            self::$notice = str_replace("</div>", "<br>", self::$notice);
         }
         $output = Template::parse(Sanitize::rich($data));
-        Self::$_notice .= $output . "</div>";
+        self::$notice .= $output . "</div>";
     }
 
     /**
-     * This is the function that allows us to issue a success message to 
+     * This is the function that allows us to issue a success message to
      * be used by the template engine before final rendering.
-     * 
+     *
      * @param  string $data The message to be issued.
-     * 
+     *
      * @return NULL
      */
     public static function success($data)
     {
-        Self::$_ui = true;
-        if (!isset(Self::$_success))
-        {
-            Self::$_success = '<div class="alert alert-success" role="alert">';
+        self::$ui = true;
+        if (!isset(self::$success)) {
+            self::$success = '<div class="alert alert-success" role="alert">';
         } else {
-            Self::$_success = str_replace("</div>", "<br>", Self::$_success);
+            self::$success = str_replace("</div>", "<br>", self::$success);
         }
         $output = Template::parse(Sanitize::rich($data));
-        Self::$_success .= $output . "</div>";
+        self::$success .= $output . "</div>";
     }
 
-    /**
-     * This is the function to return the prepared warning messages.
-     * 
-     * @return string
-     */
-    public static function GetNotice()
+    public static function checkSessions()
     {
-        return Self::$_notice;
+        $success = Session::flash('success');
+        $notice = Session::flash('notice');
+        $error = Session::flash('error');
+        if (!empty($notice)) {
+            Issue::notice($notice);
+        }
+        if (!empty($error)) {
+            Issue::error($error);
+        }
+        if (!empty($success)) {
+            Issue::success($success);
+        }
     }
 
     /**
      * This is the function that tells the application if we have
      * have any messages to display or not.
-     * 
+     *
      * @return string
      */
-    public static function GetUI()
+    public static function getUI()
     {
-        return Self::$_ui;
+        return self::$ui;
+    }
+
+    /**
+     * This is the function to return the prepared warning messages.
+     *
+     * @return string
+     */
+    public static function getNotice()
+    {
+        return self::$notice;
     }
 
     /**
      * This is the function to return the prepared success messages.
-     * 
+     *
      * @return string
      */
-    public static function GetSuccess()
+    public static function getSuccess()
     {
-        return Self::$_success;
+        return self::$success;
     }
 
     /**
      * This is the function to return the prepared error messages.
-     * 
+     *
      * @return string
      */
-    public static function GetError()
+    public static function getError()
     {
-        return Self::$_error;
+        return self::$error;
     }
 }
