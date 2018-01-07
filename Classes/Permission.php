@@ -59,9 +59,15 @@ class Permission
             self::load();
         }
         if ($default) {
-            file_put_contents(Docroot::getLocation('appPermissionsDefault')->fullPath, json_encode(self::$permissions));
+            if (file_put_contents(Docroot::getLocation('appPermissionsDefault')->fullPath, json_encode(self::$permissions))) {
+                return true;
+            }
+            return false;
         }
-        file_put_contents(Docroot::getLocation('appPermissions')->fullPath, json_encode(self::$permissions));
+        if (file_put_contents(Docroot::getLocation('appPermissions')->fullPath, json_encode(self::$permissions))) {
+            return true;
+        }
+        return false;
     }
 
     public static function addPerm($name, $value)

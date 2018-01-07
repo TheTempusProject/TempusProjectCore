@@ -135,9 +135,15 @@ class Config
             self::load();
         }
         if ($default) {
-            file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config));
+            if (file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
+                return true;
+            }
+            return false;
         }
-        file_put_contents(Docroot::getLocation('appConfig')->fullPath, json_encode(self::$config));
+        if (file_put_contents(Docroot::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -232,7 +238,7 @@ class Config
      *
      * @return boolean
      */
-    public static function generateConfig()
+    public static function generateConfig($mods = [])
     {
         $docLocation = Docroot::getLocation('appConfig');
         if (!$docLocation->error) {
@@ -249,19 +255,11 @@ class Config
         }
 
         self::$config = json_decode(file_get_contents($docLocation->fullPath), true);
-        self::updateConfig('main', 'name', Input::postNull('siteName'), true);
-        self::updateConfig('main', 'loginLimit', 5, true);
-        self::updateConfig('main', 'pageLimit', 50, true);
-        self::updateConfig('uploads', 'files', true, true);
-        self::updateConfig('uploads', 'images', true, true);
-        self::updateConfig('uploads', 'maxFileSize', 5000000, true);
-        self::updateConfig('uploads', 'maxImageSize', 500000, true);
-        self::updateConfig('database', 'dbHost', Input::postNull('dbHost'), true);
-        self::updateConfig('database', 'dbUsername', Input::postNull('dbUsername'), true);
-        self::updateConfig('database', 'dbPassword', Input::postNull('dbPassword'), true);
-        self::updateConfig('database', 'dbName', Input::postNull('dbName'), true);
-        self::updateConfig('database', 'dbEnabled', true, true);
-        self::updateConfig('database', 'dbMaxQuery', 100, true);
+        if (!empty($mods)) {
+            foreach ($mods as $mod) {
+                self::updateConfig($mod['category'], $mod['name'], $mod['value'], true);
+            }
+        }
         self::saveConfig(true);
         Debug::info('config file generated successfully.');
 

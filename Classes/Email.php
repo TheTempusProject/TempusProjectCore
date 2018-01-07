@@ -153,7 +153,7 @@ class Email
         if (self::$useTemplate) {
             $data = new \stdClass();
             if (self::$unsub) {
-                $data->UNSUB = Template::standardView('mail.default.unsub');
+                $data->UNSUB = Template::standardView('email.unsubscribe');
             } else {
                 $data->UNSUB = '';
             }
@@ -167,11 +167,11 @@ class Email
                     $data->$key = $value;
                 }
             }
-            $data->MAIL_FOOT = Template::standardView('mail.default.foot');
+            $data->MAIL_FOOT = Template::standardView('email.foot');
             $data->MAIL_TITLE = self::$title;
             $data->MAIL_BODY = Template::parse(self::$message, $data);
             $subject = Template::parse(self::$subject, $data);
-            $body = Template::standardView('mail.default.template', $data);
+            $body = Template::standardView('email.template', $data);
         } else {
             $subject = self::$subject;
             $body = '<h1>' . self::$title . '</h1>' . self::$message;

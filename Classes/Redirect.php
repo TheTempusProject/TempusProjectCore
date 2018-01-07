@@ -43,4 +43,18 @@ class Redirect
             }
         }
     }
+    
+    /**
+     * Refreshes the current page.
+     *
+     * @return null
+     */
+    public static function reload()
+    {
+        if (Debug::status('redirect')) {
+            Debug::warn('Redirect is Disabled in Debugging mode!');
+            exit();
+        }
+        header("Refresh:0");
+    }
 }

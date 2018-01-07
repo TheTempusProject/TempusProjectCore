@@ -278,7 +278,7 @@ class Check
      *
      * @return  bool
      */
-    public static function path()
+    public static function path($data)
     {
         if (!preg_match('#^[^/?*:;\\{}]+$#mi', $data)) {
             return true;

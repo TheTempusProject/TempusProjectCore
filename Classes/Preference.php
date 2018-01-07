@@ -59,9 +59,15 @@ class Preference
             self::load();
         }
         if ($default) {
-            file_put_contents(Docroot::getLocation('appPreferencesDefault')->fullPath, json_encode(self::$preferences));
+            if (file_put_contents(Docroot::getLocation('appPreferencesDefault')->fullPath, json_encode(self::$preferences))) {
+                return true;
+            }
+            return false;
         }
-        file_put_contents(Docroot::getLocation('appPreferences')->fullPath, json_encode(self::$preferences));
+        if (file_put_contents(Docroot::getLocation('appPreferences')->fullPath, json_encode(self::$preferences))) {
+            return true;
+        }
+        return false;
     }
 
     public static function addPref($name, $value)

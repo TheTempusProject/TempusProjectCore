@@ -32,6 +32,18 @@ class Code
     }
 
     /**
+     * Generates a new install hash.
+     *
+     * @return string
+     */
+    public static function genInstall()
+    {
+        $code = md5(uniqid());
+        Debug::log("Code Generated: Token: $code");
+        return $code;
+    }
+
+    /**
      * Generates a new token code.
      *
      * @return string

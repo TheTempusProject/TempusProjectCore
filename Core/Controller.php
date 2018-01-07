@@ -91,6 +91,7 @@ class Controller
     {
         Debug::group("Controller Constructor", 1);
         Issue::checkSessions();
+        Debug::warn('Requested URL: ' . Docroot::getUrl());
         self::$base = Docroot::getAddress();
         self::$location = Docroot::getFull();
         self::$cookiePrefix = Config::get('cookie/cookiePrefix');
@@ -126,13 +127,14 @@ class Controller
     protected function build()
     {
         Debug::info("Controller: Build Call");
-        self::$template->addFilter('ui', '#{UI}(.*?){/UI}#is', Issue::getUI());
+        self::$template->addFilter('ui', '#{UI}(.*?){/UI}#is', (Issue::getUI() ? '$1' : ''), true);
         self::$template->set('CONTENT', self::$content);
         self::$template->set('TITLE', self::$title);
         self::$template->set('PAGE_DESCRIPTION', self::$pageDescription);
         self::$template->set('NOTICE', Issue::getNotice());
         self::$template->set('SUCCESS', Issue::getSuccess());
         self::$template->set('ERROR', Issue::getError());
+        self::$template->set('INFO', Issue::getInfo());
         self::$template->render();
     }
 
