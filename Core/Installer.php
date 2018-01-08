@@ -152,7 +152,41 @@ class Installer extends Controller
 
         return false;
     }
+    public function uninstallModel($folder, $name, $flags = null)
+    {
+        Debug::log('Uninstalling Model: ' . $name);
+        $docroot = Docroot::getLocation('models', $name, $folder);
+        if ($docroot->error) {
+            Issue::error("$name was not installed: $docroot->errorString");
+            return false;
+        }
+        $errors = null;
+        require_once $docroot->fullPath;
+        $node = self::getNode($name);
+        if ($node === false) {
+            Debug::error('Cannot uninstall model that has not been installed.');
+            return false;
+        }
+        if (method_exists($docroot->className, 'uninstall')) {
+            if (!call_user_func_array([$docroot->className, 'uninstall'], [])) {
+                $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                $modelInfo = array_merge($modelInfo, [$Type => 'error']);
+            } else {
+                $modelInfo = array_merge($modelInfo, [$Type => 'success']);
+            }
+        }
 
+        self::setNode($name, $modelInfo, true);
+
+        if ($errors !== null) {
+            self::$errors = array_merge(self::$errors, $errors);
+            Issue::notice("$name did not install properly.");
+            return false;
+        }
+
+        Issue::success("$name has been installed.");
+        return true;
+    }
     /**
      * Requires the specified folder / model combination and calls
      * its install function.
