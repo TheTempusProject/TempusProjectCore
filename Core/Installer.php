@@ -58,6 +58,7 @@ class Installer extends Controller
             self::loadJson();
         }
     }
+
     /**
      * This function automatically attempts to install all models in the
      * specified directory.
@@ -73,6 +74,7 @@ class Installer extends Controller
     {
         return self::$errors;
     }
+
     public function getModelVersion($folder, $name)
     {
         $docroot = Docroot::getLocation('models', $name, $folder);
@@ -88,6 +90,7 @@ class Installer extends Controller
         }
         return $version;
     }
+
     public function getModelList($folder)
     {
         $dir = Docroot::getFull() . $folder;
@@ -103,6 +106,7 @@ class Installer extends Controller
         }
         return $modelList;
     }
+
     public function getModelVersionList($folder)
     {
         $modelsList = $this->getModelList($folder);
@@ -114,6 +118,7 @@ class Installer extends Controller
         }
         return $modelList;
     }
+
     /**
      * This function automatically attempts to install all models in the
      * specified directory.
@@ -152,6 +157,7 @@ class Installer extends Controller
 
         return false;
     }
+
     public function uninstallModel($folder, $name, $flags = null)
     {
         Debug::log('Uninstalling Model: ' . $name);
@@ -187,6 +193,7 @@ class Installer extends Controller
         Issue::success("$name has been installed.");
         return true;
     }
+
     /**
      * Requires the specified folder / model combination and calls
      * its install function.
@@ -304,6 +311,7 @@ RewriteCond %{REQUEST_FILENAME} !-l
 RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return $out;
     }
+    
     protected function buildHtaccess()
     {
         $write = '';
@@ -401,14 +409,17 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return true;
     }
 
-    public static function nextStep($page)
+    public static function nextStep($page, $redirect = true)
     {
         $newHash = Code::genInstall();
         self::setNode('installHash', $newHash, true);
         self::setNode('installStatus', $page, true);
         Session::put('installHash', $newHash);
         Cookie::put('installHash', $newHash);
-        Redirect::reload();
+        if ($redirect === true) {
+            Redirect::reload();
+        }
+        return true;
     }
 
     public static function getStatus()

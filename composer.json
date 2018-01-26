@@ -15,7 +15,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "firephp/firephp-core": "0.4.0"
+        "thetempusproject/tempusdebugger": "1.0"
     },
     "autoload": {
         "classmap": [
