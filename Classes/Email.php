@@ -178,10 +178,14 @@ class Email
         }
         if (is_object($email)) {
             foreach ($email as $data) {
-                mail($data->email, $subject, $body, self::$header);
+                if (!@mail($data->email, $subject, $body, self::$header)) {
+                    Debug::error('Failed to send email. Subject: ' . $subject . ' Email: ' . $data->email);
+                }
             }
         } else {
-            mail($email, $subject, $body, self::$header);
+            if (!@mail($email, $subject, $body, self::$header)) {
+                Debug::error('Failed to send email. Subject: ' . $subject . ' Email: ' . $email);
+            }
         }
         Debug::info("Email sent: $type.");
 

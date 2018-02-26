@@ -16,7 +16,7 @@
 
 namespace TempusProjectCore\Functions;
 
-use TempusProjectCore\Classes\Debug as Debug;
+use TempusProjectCore\Classes\Debug;
 
 class ExceptionHandler
 {

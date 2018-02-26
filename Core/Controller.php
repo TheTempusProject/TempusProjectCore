@@ -18,21 +18,21 @@
 
 namespace TempusProjectCore\Core;
 
-use TempusProjectCore\Classes\CustomException as CustomException;
-use TempusProjectCore\Classes\Pagination as Pagination;
-use TempusProjectCore\Functions\Docroot as Docroot;
-use TempusProjectCore\Classes\Session as Session;
-use TempusProjectCore\Classes\Cookie as Cookie;
-use TempusProjectCore\Classes\Config as Config;
-use TempusProjectCore\Classes\Check as Check;
-use TempusProjectCore\Classes\Debug as Debug;
-use TempusProjectCore\Classes\Token as Token;
-use TempusProjectCore\Classes\Input as Input;
-use TempusProjectCore\Classes\Email as Email;
-use TempusProjectCore\Classes\Issue as Issue;
-use TempusProjectCore\Classes\Hash as Hash;
-use TempusProjectCore\Classes\Log as Log;
-use TempusProjectCore\Classes\DB as DB;
+use TempusProjectCore\Classes\CustomException;
+use TempusProjectCore\Classes\Pagination;
+use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Classes\Session;
+use TempusProjectCore\Classes\Cookie;
+use TempusProjectCore\Classes\Config;
+use TempusProjectCore\Classes\Check;
+use TempusProjectCore\Classes\Debug;
+use TempusProjectCore\Classes\Token;
+use TempusProjectCore\Classes\Input;
+use TempusProjectCore\Classes\Email;
+use TempusProjectCore\Classes\Issue;
+use TempusProjectCore\Classes\Hash;
+use TempusProjectCore\Classes\Log;
+use TempusProjectCore\Classes\DB;
 
 class Controller
 {

@@ -20,15 +20,14 @@
 
 namespace TempusProjectCore\Core;
 
-use TempusProjectCore\Classes\Debug as Debug;
-use TempusProjectCore\Classes\Issue as Issue;
-use TempusProjectCore\Classes\Token as Token;
-use TempusProjectCore\Functions\Docroot as Docroot;
-use TempusProjectCore\Classes\Config as Config;
-use TempusProjectCore\Classes\CustomException as CustomException;
-use TempusProjectCore\Classes\Pagination as Pagination;
-use \DateTime as DateTimeZone;
-use \DateTime as DateTime;
+use TempusProjectCore\Classes\Debug;
+use TempusProjectCore\Classes\Issue;
+use TempusProjectCore\Classes\Token;
+use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Classes\Config;
+use TempusProjectCore\Classes\CustomException;
+use TempusProjectCore\Classes\Pagination;
+use \DateTime;
 
 class Template extends Controller
 {

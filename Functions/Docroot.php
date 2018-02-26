@@ -15,8 +15,8 @@
 
 namespace TempusProjectCore\Functions;
 
-use TempusProjectCore\Classes\Input as Input;
-use TempusProjectCore\Classes\Debug as Debug;
+use TempusProjectCore\Classes\Input;
+use TempusProjectCore\Classes\Debug;
 
 class Docroot
 {
