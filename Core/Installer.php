@@ -463,6 +463,26 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return true;
     }
 
+    public static function getComposerJson()
+    {
+        $docLocation = Docroot::getLocation('composerJson');
+        if ($docLocation->error) {
+            Debug::error('No install json found.');
+            return false;
+        }
+        return json_decode(file_get_contents($docLocation->fullPath), true);
+    }
+
+    public static function getComposerLock()
+    {
+        $docLocation = Docroot::getLocation('composerLock');
+        if ($docLocation->error) {
+            Debug::error('No install json found.');
+            return false;
+        }
+        return json_decode(file_get_contents($docLocation->fullPath), true);
+    }
+
     public static function getJson()
     {
         $docLocation = Docroot::getLocation('installer');

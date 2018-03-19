@@ -208,6 +208,24 @@ class Docroot
                 $locationData['errorString'] = '.htaccess could not be found.';
                 break;
 
+            case 'composerJson':
+                $viewName = strtolower(str_replace('.', '_', $file));
+                $locationData['root'] = self::getFull();
+                $locationData['folder'] = '';
+                $locationData['file'] = 'composer.json';
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                $locationData['errorString'] = 'composer json could not be found: ' . $locationData['fullPath'];
+                break;
+
+            case 'composerLock':
+                $viewName = strtolower(str_replace('.', '_', $file));
+                $locationData['root'] = self::getFull();
+                $locationData['folder'] = '';
+                $locationData['file'] = 'composer.lock';
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                $locationData['errorString'] = 'composer lock file not be found: ' . $locationData['fullPath'];
+                break;
+
             default:
                 $out = null;
                 break;
