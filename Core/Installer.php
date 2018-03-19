@@ -298,16 +298,43 @@ class Installer extends Controller
      *
      * @return string   - The generated contents of the htaccess file.
      */
-    protected function generateHtaccess($docroot = null)
+    protected function generateHtaccess($docroot = null, $rewrite = true)
     {
         if (empty($docroot)) {
             $docroot = Docroot::getRoot();
         }
-        $out = "RewriteEngine On
+        $out = "";
+        if ($rewrite === true) {
+            $out .= "RewriteEngine On";
+        }
+        $out .= "
 RewriteBase $docroot
-RewriteCond %{REQUEST_FILENAME} !-d
+
+# Tracking pixel
+RewriteRule ^pixel/(.*)$ index.php?tracking=pixel&url=$1 [L,NC,QSA]
+
+# Intercepts for images not found
 RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-l
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^images/(.*)$ index.php?error=image404&url=$1 [L,NC,QSA]
+
+# Intercepts for uploads not found
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^uploads/(.*)$ index.php?error=upload404&url=$1 [L,NC,QSA]
+
+# Intercepts other errors
+RewriteRule ^errors/(.*)$ index.php?error=$1 [L,NC,QSA]
+
+# Intercept all traffic not originating locally and not going to images or uploads
+RewriteCond %{REMOTE_ADDR} !^127\.0\.0\.1
+RewriteCond %{REQUEST_URI} !^images/(.*)$ [NC]
+RewriteCond %{REQUEST_URI} !^uploads/(.*)$ [NC]
+RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
+
+# Catchall for any non existent files or folders
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return $out;
     }
@@ -316,22 +343,20 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
     {
         $write = '';
         if (file_exists(Docroot::getLocation('htaccess')->fullPath)) {
-            $write = file_get_contents(Docroot::getLocation('htaccess')->fullPath);
-            $htaccess = $write;
-            if ($htaccess !== $this->generateHtaccess()) {
+            $currentHtaccess = file_get_contents(Docroot::getLocation('htaccess')->fullPath);
+            if ($currentHtaccess !== $this->generateHtaccess()) {
                 $findRewrite1 = "RewriteEngine On";
-                $findRewrite2 = "\nRewriteBase " . Docroot::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-l\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
-                if (stripos($htaccess, $findRewrite1) === false) {
-                    $write .= $findRewrite1 . "\n";
-                }
-                if (stripos($htaccess, $findRewrite2) === false) {
-                    $write .= $findRewrite2 . "\n";
+                $findRewrite2 = "\nRewriteBase " . Docroot::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
+                if (stripos($currentHtaccess, $findRewrite1) === false) {
+                    $write .= $this->generateHtaccess();
+                } elseif (stripos($currentHtaccess, $findRewrite2) === false) {
+                    $write .= $this->generateHtaccess(null, false);
                 }
             } else {
-                $write .= $this->generateHtaccess();
+                $write = $currentHtaccess;
             }
         } else {
-            $write .= $this->generateHtaccess();
+            $write = $this->generateHtaccess();
         }
 
         file_put_contents(Docroot::getLocation('htaccess')->fullPath, $write);
