@@ -131,11 +131,18 @@ class App
             $this->path = $this->controllerPath; // docroot
             return $this->controllerName;
         }
-        if ($this->directed && file_exists($this->indexPath . $this->url[0] . '.php')) {
-            Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
-            $out = array_shift($this->url);
-            $this->path = $this->indexPath; // docroot
-            return strtolower($out);
+        if ($this->directed) {
+            if (file_exists($this->indexPath . $this->url[0] . '.php')) {
+                Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
+                $out = array_shift($this->url);
+                $this->path = $this->indexPath; // docroot
+                return strtolower($out);
+            } elseif (file_exists($this->controllerPath . $this->url[0] . '.php')) {
+                Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
+                $out = array_shift($this->url);
+                $this->path = $this->controllerPath; // docroot
+                return strtolower($out);
+            }
         }
         if (!$this->directed && file_exists($this->controllerPath . $this->url[0] . '.php')) {
             Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);

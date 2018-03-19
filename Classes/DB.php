@@ -477,7 +477,7 @@ class DB
      * @todo  - add more error reporting and checks
      *          use switch/cases?
      */
-    public function addfield($name, $type, $length, $null = false, $default = null, $comment = '')
+    public function addfield($name, $type, $length, $null = true, $default = null, $comment = '')
     {
         if (empty($this->tableBuff)) {
             Debug::info("No Table set.");

@@ -23,27 +23,29 @@
 
 namespace TempusProjectCore\Core;
 
-use TempusProjectCore\Classes\Debug as Debug;
-use TempusProjectCore\Classes\Config as Config;
-use TempusProjectCore\Classes\DB as DB;
-use TempusProjectCore\Classes\Session as Session;
-use TempusProjectCore\Classes\Cookie as Cookie;
-use TempusProjectCore\Classes\Redirect as Redirect;
-use TempusProjectCore\Classes\Log as Log;
-use TempusProjectCore\Classes\Check as Check;
-use TempusProjectCore\Classes\Input as Input;
-use TempusProjectCore\Classes\Email as Email;
-use TempusProjectCore\Classes\Pagination as Pagination;
-use TempusProjectCore\Classes\Issue as Issue;
-use TempusProjectCore\Classes\Hash as Hash;
-use TempusProjectCore\Classes\Token as Token;
-use TempusProjectCore\Functions\Docroot as Docroot;
-use TempusProjectCore\Classes\CustomException as CustomException;
+use TempusProjectCore\Classes\Debug;
+use TempusProjectCore\Classes\Config;
+use TempusProjectCore\Classes\DB;
+use TempusProjectCore\Classes\Session;
+use TempusProjectCore\Classes\Cookie;
+use TempusProjectCore\Classes\Code;
+use TempusProjectCore\Classes\Redirect;
+use TempusProjectCore\Classes\Log;
+use TempusProjectCore\Classes\Check;
+use TempusProjectCore\Classes\Input;
+use TempusProjectCore\Classes\Email;
+use TempusProjectCore\Classes\Pagination;
+use TempusProjectCore\Classes\Issue;
+use TempusProjectCore\Classes\Hash;
+use TempusProjectCore\Classes\Token;
+use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Classes\CustomException;
 
 class Installer extends Controller
 {
     private $override = false;
     private $status = null;
+    private static $installJson = null;
     private static $errors = [];
 
     /**
@@ -52,7 +54,11 @@ class Installer extends Controller
     public function __construct()
     {
         Debug::log('Installer Initiated.');
+        if (self::$installJson === null) {
+            self::loadJson();
+        }
     }
+
     /**
      * This function automatically attempts to install all models in the
      * specified directory.
@@ -68,6 +74,51 @@ class Installer extends Controller
     {
         return self::$errors;
     }
+
+    public function getModelVersion($folder, $name)
+    {
+        $docroot = Docroot::getLocation('models', $name, $folder);
+        if ($docroot->error) {
+            Issue::error("$name was not installed: $docroot->errorString");
+            return false;
+        }
+        require_once $docroot->fullPath;
+        if (method_exists($docroot->className, 'modelVersion')) {
+            $version = call_user_func_array([$docroot->className, 'modelVersion'], []);
+        } else {
+            $version = 'unknown';
+        }
+        return $version;
+    }
+
+    public function getModelList($folder)
+    {
+        $dir = Docroot::getFull() . $folder;
+        if (!file_exists($dir)) {
+            Issue::error('Models folder is missing.');
+            return false;
+        }
+        $files = scandir($dir);
+        array_shift($files);
+        array_shift($files);
+        foreach ($files as $key => $value) {
+            $modelList[] = str_replace('.php', '', $value);
+        }
+        return $modelList;
+    }
+
+    public function getModelVersionList($folder)
+    {
+        $modelsList = $this->getModelList($folder);
+        foreach ($modelsList as $model) {
+            $modelList[] = (object) [
+                'name' => $model,
+                'version' => self::getModelVersion($folder, $model)
+            ];
+        }
+        return $modelList;
+    }
+
     /**
      * This function automatically attempts to install all models in the
      * specified directory.
@@ -79,20 +130,24 @@ class Installer extends Controller
      *
      * @return boolean
      */
-    public function installFolder($directory = 'Models')
+    public function installModels($directory = 'Models', $modelList = [], $flags = null)
     {
         self::$db = DB::getInstance('', '', '', '', true);
         $query = 'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
                   SET time_zone = "+05:00"';
         self::$db->raw($query);
-        Debug::log('Installing all models in folder: ' . $directory);
-        $dir = Docroot::getFull() . $directory . '/';
-        $files = scandir($dir);
-        array_shift($files);
-        array_shift($files);
-        foreach ($files as $key => $value) {
-            if (!self::installModel($directory, str_replace('.php', '', $value))) {
-                $fail = true;
+        if (empty($modelList)) {
+            $list = $this->getModelList($directory);
+            foreach ($list as $model) {
+                $modelList[] = [$model => true];
+            }
+        }
+        Debug::log('Installing selected models in folder: ' . $directory);
+        foreach ($modelList as $key => $value) {
+            if ($value === true) {
+                if (!self::installModel($directory, $key, $flags)) {
+                    $fail = true;
+                }
             }
         }
 
@@ -101,6 +156,42 @@ class Installer extends Controller
         }
 
         return false;
+    }
+
+    public function uninstallModel($folder, $name, $flags = null)
+    {
+        Debug::log('Uninstalling Model: ' . $name);
+        $docroot = Docroot::getLocation('models', $name, $folder);
+        if ($docroot->error) {
+            Issue::error("$name was not installed: $docroot->errorString");
+            return false;
+        }
+        $errors = null;
+        require_once $docroot->fullPath;
+        $node = self::getNode($name);
+        if ($node === false) {
+            Debug::error('Cannot uninstall model that has not been installed.');
+            return false;
+        }
+        if (method_exists($docroot->className, 'uninstall')) {
+            if (!call_user_func_array([$docroot->className, 'uninstall'], [])) {
+                $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                $modelInfo = array_merge($modelInfo, [$Type => 'error']);
+            } else {
+                $modelInfo = array_merge($modelInfo, [$Type => 'success']);
+            }
+        }
+
+        self::setNode($name, $modelInfo, true);
+
+        if ($errors !== null) {
+            self::$errors = array_merge(self::$errors, $errors);
+            Issue::notice("$name did not install properly.");
+            return false;
+        }
+
+        Issue::success("$name has been installed.");
+        return true;
     }
 
     /**
@@ -112,7 +203,7 @@ class Installer extends Controller
      *
      * @return boolean
      */
-    public function installModel($folder, $name)
+    public function installModel($folder, $name, $flags = null)
     {
         Debug::log('Installing Model: ' . $name);
         $docroot = Docroot::getLocation('models', $name, $folder);
@@ -120,17 +211,82 @@ class Installer extends Controller
             Issue::error("$name was not installed: $docroot->errorString");
             return false;
         }
+        $errors = null;
         require_once $docroot->fullPath;
-        if (!method_exists($docroot->className, 'install')) {
-            self::$errors[] = ['errorInfo' => "$name Install method not found."];
+        $node = self::getNode($name);
+        if (method_exists($docroot->className, 'installFlags')) {
+            if (call_user_func_array([$docroot->className, 'installFlags'], [])) {
+                $modelFlags = call_user_func_array([$docroot->className, 'installFlags'], []);
+            } else {
+                $errors[] = ['errorInfo' => "$name failed to execute installFlags properly."];
+            }
+        }
+        $installTypes = ['installDB', 'installPermissions', 'installConfigs', 'installResources', 'installPreferences'];
+        foreach ($installTypes as $type) {
+            if (isset($flags[$type])) {
+                // This is the safeguard for when a model doesn't have an installer you are requiring
+                if (isset($modelFlags[$type]) && $modelFlags[$type] === false) {
+                    $out[$type] = false;
+                } else {
+                    $out[$type] = $flags[$type];
+                }
+            } else {
+                if (isset($modelFlags[$type])) {
+                    $out[$type] = $modelFlags[$type];
+                } else {
+                    $out[$type] = true;
+                }
+            }
+        }
+        $flags = $out;
+        if ($node === false) {
+            $modelInfo = [
+                'name' => $name,
+                'installDate' => time(),
+                'lastUpdate' => time(),
+                'currentVersion' => $this->getModelVersion($folder, $name)
+            ];
+        } else {
+            $modelInfo = $node;
+        }
+        
+        
+        foreach ($installTypes as $Type) {
+            if (!empty($flags[$Type]) && $flags[$Type] === true) {
+                if (method_exists($docroot->className, $Type)) {
+                    if (!call_user_func_array([$docroot->className, $Type], [])) {
+                        $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                        $modelInfo = array_merge($modelInfo, [$Type => 'error']);
+                    } else {
+                        $modelInfo = array_merge($modelInfo, [$Type => 'success']);
+                    }
+                } else {
+                    if (!empty($flags[$Type]) && $flags[$Type] === true) {
+                        $errors[] = ['errorInfo' => "$name $Type method not found."];
+                        $modelInfo = array_merge($modelInfo, [$Type => 'not found']);
+                    } else {
+                        if (!isset($modelInfo[$Type])) {
+                            $modelInfo = array_merge($modelInfo, [$Type => 'skipped']);
+                        }
+                    }
+                }
+            } else {
+                if (!isset($modelInfo[$Type])) {
+                    $modelInfo = array_merge($modelInfo, [$Type => 'skipped']);
+                }
+            }
+        }
+
+        self::setNode($name, $modelInfo, true);
+
+        if ($errors !== null) {
+            self::$errors = array_merge(self::$errors, $errors);
+            Issue::notice("$name did not install properly.");
             return false;
         }
-        if (call_user_func_array([$docroot->className, 'install'], [])) {
-            Issue::success("$name was successfully installed.");
-            return true;
-        }
-        self::$errors[] = ['errorInfo' => "$name failed to install properly."];
-        return false;
+
+        Issue::success("$name has been installed.");
+        return true;
     }
 
     /**
@@ -155,6 +311,32 @@ RewriteCond %{REQUEST_FILENAME} !-l
 RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return $out;
     }
+    
+    protected function buildHtaccess()
+    {
+        $write = '';
+        if (file_exists(Docroot::getLocation('htaccess')->fullPath)) {
+            $write = file_get_contents(Docroot::getLocation('htaccess')->fullPath);
+            $htaccess = $write;
+            if ($htaccess !== $this->generateHtaccess()) {
+                $findRewrite1 = "RewriteEngine On";
+                $findRewrite2 = "\nRewriteBase " . Docroot::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-l\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
+                if (stripos($htaccess, $findRewrite1) === false) {
+                    $write .= $findRewrite1 . "\n";
+                }
+                if (stripos($htaccess, $findRewrite2) === false) {
+                    $write .= $findRewrite2 . "\n";
+                }
+            } else {
+                $write .= $this->generateHtaccess();
+            }
+        } else {
+            $write .= $this->generateHtaccess();
+        }
+
+        file_put_contents(Docroot::getLocation('htaccess')->fullPath, $write);
+        return true;
+    }
 
     /**
      * Checks the root directory for a .htaccess file and compares it with
@@ -175,33 +357,121 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
     public function checkHtaccess($create = false)
     {
         if (file_exists(Docroot::getLocation('htaccess')->fullPath)) {
-            if (file_get_contents(Docroot::getLocation('htaccess')->fullPath) === $this->generateHtaccess()) {
+            $htaccess = file_get_contents(Docroot::getLocation('htaccess')->fullPath);
+            if ($htaccess === $this->generateHtaccess()) {
+                return true;
+            }
+            $check = 0;
+            $findRewrite1 = "RewriteEngine On\n";
+            $findRewrite2 = "RewriteBase " . Docroot::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-l\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
+            if (stripos($htaccess, $findRewrite1)) {
+                $check++;
+            }
+            if (stripos($htaccess, $findRewrite2)) {
+                $check++;
+            }
+            if ($check === 2) {
                 if ($create) {
-                    Issue::notice('Previous htaccess file did not need to be overridden.');
+                    Issue::notice('Previous htaccess file did not need to be edited.');
                 }
-
-                return true;
-            } else {
-                if ($this->$override) {
-                    file_put_contents(Docroot::getLocation('htaccess')->fullPath, $this->generateHtaccess());
-                    Issue::success('.htaccess file has been overridden successfully.');
-
-                    return true;
-                }
-                Issue::error('The .htaccess file already exists in the root directory and appears to be modified from the default generated version. You will need to manually modify or remove it before continuing.');
-                Issue::notice('The htaccess file could easily be created/used by other applications or even your hosting provider. Please double check before removing or modifying it.');
-
-                return false;
-            }
-        } else {
-            if ($create) {
-                file_put_contents(Docroot::getLocation('htaccess')->fullPath, $this->generateHtaccess());
-                Issue::success('.htaccess file generated successfully.');
-
                 return true;
             }
+        }
+        if (!$create) {
+            return false;
+        }
+        return $this->buildHtaccess();
+    }
+
+    public static function checkSession()
+    {
+        if (!isset(self::$installJson['installHash'])) {
+            Debug::error("install hash not found on file.");
 
             return false;
         }
+        if (!Session::exists('installHash') && !Cookie::exists('installHash')) {
+            Debug::error("install hash not found in session or cookie.");
+
+            return false;
+        }
+        if (Cookie::exists('installHash') && !Session::exists('installHash')) {
+            if (Cookie::get('installHash') !== self::$installJson['installHash']) {
+                Cookie::delete('installHash');
+                return false;
+            }
+            Session::set('installHash', Cookie::get('installHash'));
+        }
+        if (Session::get('installHash') !== self::$installJson['installHash']) {
+            Session::delete('installHash');
+            return false;
+        }
+        return true;
+    }
+
+    public static function nextStep($page, $redirect = true)
+    {
+        $newHash = Code::genInstall();
+        self::setNode('installHash', $newHash, true);
+        self::setNode('installStatus', $page, true);
+        Session::put('installHash', $newHash);
+        Cookie::put('installHash', $newHash);
+        if ($redirect === true) {
+            Redirect::reload();
+        }
+        return true;
+    }
+
+    public static function getStatus()
+    {
+        if (isset(self::$installJson['installStatus'])) {
+            return self::$installJson['installStatus'];
+        }
+        Debug::error("install status not found.");
+
+        return false;
+    }
+
+    private static function loadJson()
+    {
+        self::$installJson = self::getJson();
+        return true;
+    }
+
+    public static function getJson()
+    {
+        $docLocation = Docroot::getLocation('installer');
+        if ($docLocation->error) {
+            Debug::error('No install json found.');
+            return false;
+        }
+        return json_decode(file_get_contents($docLocation->fullPath), true);
+    }
+
+    public static function getNode($name)
+    {
+        if (isset(self::$installJson[$name])) {
+            return self::$installJson[$name];
+        }
+        Debug::error("install node not found.");
+
+        return false;
+    }
+
+    public static function saveJson()
+    {
+        if (file_put_contents(Docroot::getLocation('installer')->fullPath, json_encode(self::$installJson))) {
+            return true;
+        }
+        return false;
+    }
+
+    public static function setNode($name, $value, $save = false)
+    {
+        self::$installJson[$name] = $value;
+        if ($save !== false) {
+            return self::saveJson();
+        }
+        return true;
     }
 }

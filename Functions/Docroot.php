@@ -15,8 +15,8 @@
 
 namespace TempusProjectCore\Functions;
 
-use TempusProjectCore\Classes\Input as Input;
-use TempusProjectCore\Classes\Debug as Debug;
+use TempusProjectCore\Classes\Input;
+use TempusProjectCore\Classes\Debug;
 
 class Docroot
 {
@@ -42,6 +42,7 @@ class Docroot
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Model could not be found: ' . $locationData['fullPath'];
                 break;
+
             case 'views':
                 $viewName = strtolower(str_replace('.', '_', $file));
                 $locationData['root'] = self::getFull();
@@ -50,6 +51,7 @@ class Docroot
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'View could not be found: ' . $locationData['fullPath'];
                 break;
+
             case 'controllers':
                 $locationData['root'] = self::getFull();
                 $locationData['folder'] = 'Controllers/';
@@ -58,6 +60,7 @@ class Docroot
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Controller could not be found: ' . $locationData['fullPath'];
                 break;
+
             case 'template':
                 $locationData['root'] = self::getFull();
                 $locationData['folder'] = 'Templates/' . $file . '/';
@@ -155,17 +158,9 @@ class Docroot
                 $locationData['errorString'] = 'Default permissions could not be found: ' . $locationData['fullPath'];
                 break;
 
-            case 'htaccess':
-                $locationData['root'] = self::getFull();
-                $locationData['folder'] = '';
-                $locationData['file'] = '.htaccess';
-                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
-                $locationData['errorString'] = '.htaccess could not be found.';
-                break;
-
             case 'imageUploadFolder':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'Images/Uploads/';
+                $locationData['folder'] = 'Uploads/Images/';
                 $locationData['file'] = $file . '/';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Image upload folder could not be found.';
@@ -173,7 +168,7 @@ class Docroot
 
             case 'imageUploadFile':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'Images/Uploads/' . $folder . '/';
+                $locationData['folder'] = 'Uploads/Images/' . $folder . '/';
                 $locationData['file'] = $file;
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Image could not be found.';
@@ -186,6 +181,31 @@ class Docroot
                 $locationData['className'] = APP_SPACE . '\\Forms';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Form validation class could not be found.';
+                break;
+
+            case 'filters':
+                $locationData['root'] = self::getFull();
+                $locationData['folder'] = 'App/';
+                $locationData['file'] = 'filters.php';
+                $locationData['className'] = APP_SPACE . '\\Filters';
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                $locationData['errorString'] = 'Custom filter class could not be found.';
+                break;
+
+            case 'installer':
+                $locationData['root'] = self::getFull();
+                $locationData['folder'] = 'App/';
+                $locationData['file'] = 'install.json';
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                $locationData['errorString'] = 'Install config could not be found.';
+                break;
+
+            case 'htaccess':
+                $locationData['root'] = self::getFull();
+                $locationData['folder'] = '';
+                $locationData['file'] = '.htaccess';
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                $locationData['errorString'] = '.htaccess could not be found.';
                 break;
 
             default:
