@@ -174,8 +174,6 @@ class Check
 
             return false;
         }
-
-        return true;
     }
 
     /**
@@ -213,6 +211,23 @@ class Check
             return true;
         }
         self::addError('Invalid alpha-numeric.', $data);
+
+        return false;
+    }
+
+    /**
+     * Checks for alpha-numeric type.
+     *
+     * @param  string $data - The data being checked.
+     *
+     * @return boolean
+     */
+    public static function uploads()
+    {
+        if (ini_get('file_uploads') == 1) {
+            return true;
+        }
+        self::addError('Uploads are disabled.');
 
         return false;
     }

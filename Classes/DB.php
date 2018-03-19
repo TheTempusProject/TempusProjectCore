@@ -150,6 +150,7 @@ class DB
      */
     protected function tableExists($name)
     {
+        $name = Config::get('database/dbPrefix') . $name;
         $this->raw("SHOW TABLES LIKE '$name'");
         if (!$this->error && $this->count === 0) {
             return false;
@@ -174,6 +175,7 @@ class DB
         if (!$this->tableExists($table)) {
             return false;
         }
+        $table = Config::get('database/dbPrefix') . $table;
         $this->raw("SHOW COLUMNS FROM `$table` LIKE '$column'");
         if (!$this->error && $this->count === 0) {
             return false;
@@ -275,6 +277,7 @@ class DB
      */
     public function action($action, $tableName, $where, $by = null, $direction = 'DESC', $reqLimit = null)
     {
+
         $this->error = false;
         if (!self::enabled()) {
             $this->error = true;
@@ -291,6 +294,7 @@ class DB
         if ($action == 'DELETE') {
             $noFetch = true;
         }
+        $tableName = Config::get('database/dbPrefix') . $tableName;
         $sql = "{$action} FROM {$tableName} WHERE ";
         $validOperators = ['=', '!=', '>', '<', '>=', '<=', 'LIKE'];
         $validDelimiters = ['AND', 'OR'];
@@ -385,6 +389,7 @@ class DB
                 $valuesSQL .= ', ';
             }
         }
+        $table = Config::get('database/dbPrefix') . $table;
         $sql = "INSERT INTO {$table} (`".$keysSQL."`) VALUES ({$valuesSQL})";
         if (!$this->query($sql, $fields, true)->error()) {
             return true;
@@ -412,6 +417,7 @@ class DB
                 $updateSQL .= ', ';
             }
         }
+        $table = Config::get('database/dbPrefix') . $table;
         $sql = "UPDATE {$table} SET {$updateSQL} WHERE ID = {$id}";
         if (!$this->query($sql, $fields, true)->error()) {
             return true;
@@ -527,24 +533,23 @@ class DB
             
             return false;
         }
+        $table = Config::get('database/dbPrefix') . $this->tableBuff;
         if ($this->tableExists($this->tableBuff)) {
-            Debug::error("Table already exists: $this->tableBuff");
+            Debug::error("Table already exists: $table");
 
             return false;
         }
-        if (!empty($this->tableBuff)) {
-            $this->queryBuff .= "CREATE TABLE `$this->tableBuff` (";
-            $x = 0;
-            $y = count($this->fieldBuff);
-            while ($x < $y) {
-                $this->queryBuff .= $this->fieldBuff[$x];
-                $x++;
-                $this->queryBuff .= ($x < $y) ? ',' :  '';
-            }
-            $this->queryBuff .= ")  ENGINE=InnoDB DEFAULT CHARSET=latin1; ALTER TABLE `" . $this->tableBuff . "` ADD PRIMARY KEY (`ID`); ";
-            $this->queryBuff .= "ALTER TABLE `" . $this->tableBuff . "` MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Primary index value';";
-            $this->queryStatus = ($this->raw($this->queryBuff) ? true : false);
+        $this->queryBuff .= "CREATE TABLE `$table` (";
+        $x = 0;
+        $y = count($this->fieldBuff);
+        while ($x < $y) {
+            $this->queryBuff .= $this->fieldBuff[$x];
+            $x++;
+            $this->queryBuff .= ($x < $y) ? ',' :  '';
         }
+        $this->queryBuff .= ")  ENGINE=InnoDB DEFAULT CHARSET=latin1; ALTER TABLE `" . $table . "` ADD PRIMARY KEY (`ID`); ";
+        $this->queryBuff .= "ALTER TABLE `" . $table . "` MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Primary index value';";
+        $this->queryStatus = ($this->raw($this->queryBuff) ? true : false);
     }
 
     public function search($table, $column, $param)

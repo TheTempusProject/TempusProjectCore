@@ -135,10 +135,9 @@ class Config
             self::load();
         }
         if ($default) {
-            if (file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
-                return true;
+            if (!file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
+                return false;
             }
-            return false;
         }
         if (file_put_contents(Docroot::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
             return true;
@@ -260,9 +259,11 @@ class Config
                 self::updateConfig($mod['category'], $mod['name'], $mod['value'], true);
             }
         }
-        self::saveConfig(true);
-        Debug::info('config file generated successfully.');
+        if (self::saveConfig(true)) {
+            Debug::info('config file generated successfully.');
+            return true;
+        }
 
-        return true;
+        return false;
     }
 }
