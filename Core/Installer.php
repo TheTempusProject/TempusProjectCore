@@ -328,6 +328,7 @@ RewriteRule ^errors/(.*)$ index.php?error=$1 [L,NC,QSA]
 
 # Intercept all traffic not originating locally and not going to images or uploads
 RewriteCond %{REMOTE_ADDR} !^127\.0\.0\.1
+RewriteCond %{REMOTE_ADDR} !^\:\:1
 RewriteCond %{REQUEST_URI} !^images/(.*)$ [NC]
 RewriteCond %{REQUEST_URI} !^uploads/(.*)$ [NC]
 RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]
