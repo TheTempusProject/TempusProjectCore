@@ -175,7 +175,7 @@ class Installer extends Controller
         }
         if (method_exists($docroot->className, 'uninstall')) {
             if (!call_user_func_array([$docroot->className, 'uninstall'], [])) {
-                $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                $errors[] = ['errorInfo' => "$name failed to execute uninstall properly."];
                 $modelInfo = array_merge($modelInfo, [$Type => 'error']);
             } else {
                 $modelInfo = array_merge($modelInfo, [$Type => 'success']);
@@ -186,7 +186,7 @@ class Installer extends Controller
 
         if ($errors !== null) {
             self::$errors = array_merge(self::$errors, $errors);
-            Issue::notice("$name did not install properly.");
+            Issue::notice("$name did not uninstall properly.");
             return false;
         }
 
