@@ -68,20 +68,6 @@ class Controller
     protected static $isAdmin = false;
     protected static $isMod = false;
 
-    /////////////////
-    // TO BE MOVED //
-    /////////////////
-    public static $bugreport;
-    public static $subscribe;
-    public static $feedback;
-    public static $session;
-    public static $message;
-    public static $comment;
-    public static $group;
-    public static $user;
-    public static $blog;
-    public static $log;
-
     /**
      * This is the constructor, we use this to populate some of our system
      * variables needed for the application like; initiating the DB, loading
@@ -100,23 +86,6 @@ class Controller
         self::$template = new Template();
         self::$activeGroup = json_decode(file_get_contents(Docroot::getLocation('permissionsDefault')->fullPath), true);
         self::$activePrefs = json_decode(file_get_contents(Docroot::getLocation('preferencesDefault')->fullPath));
-        
-        /**
-         * @todo  - This needs to be moved to TheTempusProject but that
-         * requires more rewriting than i wanted to do in this revision
-         * soooooo..... till next time folks!
-         */
-        self::$blog         = $this->model('blog');
-        self::$bugreport    = $this->model('bugreport');
-        self::$comment      = $this->model('comment');
-        self::$feedback     = $this->model('feedback');
-        self::$group        = $this->model('group');
-        self::$log          = $this->model('log');
-        self::$message      = $this->model('message');
-        self::$session      = $this->model('sessions');
-        self::$subscribe    = $this->model('subscribe');
-        self::$user         = $this->model('user');
-
         Debug::gend();
     }
 
