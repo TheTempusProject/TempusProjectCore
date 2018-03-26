@@ -19,6 +19,7 @@
 namespace TempusProjectCore\Classes;
 
 use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Core\Installer;
 
 require_once Docroot::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
 
@@ -57,6 +58,10 @@ class Debug
             ob_start();
             self::$tempusDebugger = TempusDebugger::getInstance(true);
             self::$tempusDebugger->setOption('includeLineNumbers', self::$showLines);
+            $installer = new Installer;
+            if ($installer->getNode('installHash') !== false) {
+                self::$tempusDebugger->setHash($installer->getNode('installHash'));
+            }
         }
     }
 
