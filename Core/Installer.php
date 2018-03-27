@@ -244,12 +244,12 @@ class Installer extends Controller
                 'name' => $name,
                 'installDate' => time(),
                 'lastUpdate' => time(),
+                'installStatus' => 'not installed',
                 'currentVersion' => $this->getModelVersion($folder, $name)
             ];
         } else {
             $modelInfo = $node;
         }
-        
         
         foreach ($installTypes as $Type) {
             if (!empty($flags[$Type]) && $flags[$Type] === true) {
@@ -257,6 +257,7 @@ class Installer extends Controller
                     if (!call_user_func_array([$docroot->className, $Type], [])) {
                         $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
                         $modelInfo = array_merge($modelInfo, [$Type => 'error']);
+                        $modelInfo['installStatus'] = 'partially installed';
                     } else {
                         $modelInfo = array_merge($modelInfo, [$Type => 'success']);
                     }
@@ -264,6 +265,7 @@ class Installer extends Controller
                     if (!empty($flags[$Type]) && $flags[$Type] === true) {
                         $errors[] = ['errorInfo' => "$name $Type method not found."];
                         $modelInfo = array_merge($modelInfo, [$Type => 'not found']);
+                        $modelInfo['installStatus'] = 'partially installed';
                     } else {
                         if (!isset($modelInfo[$Type])) {
                             $modelInfo = array_merge($modelInfo, [$Type => 'skipped']);
@@ -276,7 +278,9 @@ class Installer extends Controller
                 }
             }
         }
-
+        if ($modelInfo['installStatus'] !== 'partially installed') {
+            $modelInfo['installStatus'] = 'installed';
+        }
         self::setNode($name, $modelInfo, true);
 
         if ($errors !== null) {

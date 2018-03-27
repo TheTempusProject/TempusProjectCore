@@ -543,6 +543,9 @@ class Template extends Controller
         $template = preg_replace_callback(
             $dtc,
             function ($data) {
+                if ($data[2] == '' || $data[2] == 'null') {
+                    return '';
+                }
                 if (stripos($data[1], 'date')) {
                     $dateFormat = self::$activePrefs->dateFormat;
                 } elseif (stripos($data[1], 'time')) {
