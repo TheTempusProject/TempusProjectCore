@@ -206,18 +206,16 @@ class Installer extends Controller
     public function installModel($folder, $name, $flags = null)
     {
         Debug::log('Installing Model: ' . $name);
+        $errors = null;
         $docroot = Docroot::getLocation('models', $name, $folder);
         if ($docroot->error) {
-            Issue::error("$name was not installed: $docroot->errorString");
+            Debug::error("$name was not installed: $docroot->errorString");
             return false;
         }
-        $errors = null;
         require_once $docroot->fullPath;
         $node = $this->getNode($name);
         if (method_exists($docroot->className, 'installFlags')) {
-            if (call_user_func_array([$docroot->className, 'installFlags'], [])) {
-                $modelFlags = call_user_func_array([$docroot->className, 'installFlags'], []);
-            } else {
+            if (!$modelFlags = call_user_func_array([$docroot->className, 'installFlags'], [])) {
                 $errors[] = ['errorInfo' => "$name failed to execute installFlags properly."];
             }
         }
@@ -250,32 +248,28 @@ class Installer extends Controller
         } else {
             $modelInfo = $node;
         }
-        
         foreach ($installTypes as $Type) {
             if (!empty($flags[$Type]) && $flags[$Type] === true) {
+                if (!empty($modelInfo[$Type]) && $modelInfo[$Type] == 'success') {
+                    Debug::warn("$Type has already been successfully installed");
+                    continue;
+                }
                 if (method_exists($docroot->className, $Type)) {
-                    if (!call_user_func_array([$docroot->className, $Type], [])) {
-                        $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
-                        $modelInfo = array_merge($modelInfo, [$Type => 'error']);
-                        $modelInfo['installStatus'] = 'partially installed';
+                    if (call_user_func_array([$docroot->className, $Type], [])) {
+                        $modelInfo[$Type] = 'success';
                     } else {
-                        $modelInfo = array_merge($modelInfo, [$Type => 'success']);
+                        $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                        $modelInfo[$Type] = 'error';
+                        $modelInfo['installStatus'] = 'partially installed';
                     }
                 } else {
-                    if (!empty($flags[$Type]) && $flags[$Type] === true) {
-                        $errors[] = ['errorInfo' => "$name $Type method not found."];
-                        $modelInfo = array_merge($modelInfo, [$Type => 'not found']);
-                        $modelInfo['installStatus'] = 'partially installed';
-                    } else {
-                        if (!isset($modelInfo[$Type])) {
-                            $modelInfo = array_merge($modelInfo, [$Type => 'skipped']);
-                        }
-                    }
+                    $errors[] = ['errorInfo' => "$name $Type method not found."];
+                    $modelInfo[$Type] = 'not found';
+                    $modelInfo['installStatus'] = 'partially installed';
                 }
-            } else {
-                if (!isset($modelInfo[$Type])) {
-                    $modelInfo = array_merge($modelInfo, [$Type => 'skipped']);
-                }
+            }
+            if (!isset($modelInfo[$Type])) {
+                $modelInfo[$Type] = 'skipped';
             }
         }
         if ($modelInfo['installStatus'] !== 'partially installed') {
