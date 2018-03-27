@@ -55,7 +55,7 @@ class Installer extends Controller
     {
         Debug::log('Installer Initiated.');
         if (self::$installJson === null) {
-            self::loadJson();
+            self::$installJson = $this->getJson();
         }
     }
 
@@ -113,7 +113,7 @@ class Installer extends Controller
         foreach ($modelsList as $model) {
             $modelList[] = (object) [
                 'name' => $model,
-                'version' => self::getModelVersion($folder, $model)
+                'version' => $this->getModelVersion($folder, $model),
             ];
         }
         return $modelList;
@@ -145,7 +145,7 @@ class Installer extends Controller
         Debug::log('Installing selected models in folder: ' . $directory);
         foreach ($modelList as $key => $value) {
             if ($value === true) {
-                if (!self::installModel($directory, $key, $flags)) {
+                if (!$this->installModel($directory, $key, $flags)) {
                     $fail = true;
                 }
             }
@@ -168,7 +168,7 @@ class Installer extends Controller
         }
         $errors = null;
         require_once $docroot->fullPath;
-        $node = self::getNode($name);
+        $node = $this->getNode($name);
         if ($node === false) {
             Debug::error('Cannot uninstall model that has not been installed.');
             return false;
@@ -182,7 +182,7 @@ class Installer extends Controller
             }
         }
 
-        self::setNode($name, $modelInfo, true);
+        $this->setNode($name, $modelInfo, true);
 
         if ($errors !== null) {
             self::$errors = array_merge(self::$errors, $errors);
@@ -213,7 +213,7 @@ class Installer extends Controller
         }
         $errors = null;
         require_once $docroot->fullPath;
-        $node = self::getNode($name);
+        $node = $this->getNode($name);
         if (method_exists($docroot->className, 'installFlags')) {
             if (call_user_func_array([$docroot->className, 'installFlags'], [])) {
                 $modelFlags = call_user_func_array([$docroot->className, 'installFlags'], []);
@@ -281,7 +281,7 @@ class Installer extends Controller
         if ($modelInfo['installStatus'] !== 'partially installed') {
             $modelInfo['installStatus'] = 'installed';
         }
-        self::setNode($name, $modelInfo, true);
+        $this->setNode($name, $modelInfo, true);
 
         if ($errors !== null) {
             self::$errors = array_merge(self::$errors, $errors);
@@ -413,7 +413,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return $this->buildHtaccess();
     }
 
-    public static function checkSession()
+    public function checkSession()
     {
         if (!isset(self::$installJson['installHash'])) {
             Debug::error("install hash not found on file.");
@@ -439,11 +439,11 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return true;
     }
 
-    public static function nextStep($page, $redirect = true)
+    public function nextStep($page, $redirect = true)
     {
         $newHash = Code::genInstall();
-        self::setNode('installHash', $newHash, true);
-        self::setNode('installStatus', $page, true);
+        $this->setNode('installHash', $newHash, true);
+        $this->setNode('installStatus', $page, true);
         Session::put('installHash', $newHash);
         Cookie::put('installHash', $newHash);
         if ($redirect === true) {
@@ -452,7 +452,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return true;
     }
 
-    public static function getStatus()
+    public function getStatus()
     {
         if (isset(self::$installJson['installStatus'])) {
             return self::$installJson['installStatus'];
@@ -462,13 +462,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return false;
     }
 
-    private static function loadJson()
-    {
-        self::$installJson = self::getJson();
-        return true;
-    }
-
-    public static function getComposerJson()
+    public function getComposerJson()
     {
         $docLocation = Docroot::getLocation('composerJson');
         if ($docLocation->error) {
@@ -478,7 +472,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return json_decode(file_get_contents($docLocation->fullPath), true);
     }
 
-    public static function getComposerLock()
+    public function getComposerLock()
     {
         $docLocation = Docroot::getLocation('composerLock');
         if ($docLocation->error) {
@@ -488,7 +482,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return json_decode(file_get_contents($docLocation->fullPath), true);
     }
 
-    public static function getJson()
+    public function getJson()
     {
         $docLocation = Docroot::getLocation('installer');
         if ($docLocation->error) {
@@ -498,17 +492,17 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return json_decode(file_get_contents($docLocation->fullPath), true);
     }
 
-    public static function getNode($name)
+    public function getNode($name)
     {
         if (isset(self::$installJson[$name])) {
             return self::$installJson[$name];
         }
-        Debug::error("install node not found.");
-
+        Debug::error("install node not found: $name");
+        
         return false;
     }
 
-    public static function saveJson()
+    public function saveJson()
     {
         if (file_put_contents(Docroot::getLocation('installer')->fullPath, json_encode(self::$installJson))) {
             return true;
@@ -516,11 +510,11 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return false;
     }
 
-    public static function setNode($name, $value, $save = false)
+    public function setNode($name, $value, $save = false)
     {
         self::$installJson[$name] = $value;
         if ($save !== false) {
-            return self::saveJson();
+            return $this->saveJson();
         }
         return true;
     }
