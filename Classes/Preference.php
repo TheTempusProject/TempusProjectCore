@@ -15,7 +15,8 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Classes\Debug;
 
 class Preference
 {
@@ -48,7 +49,7 @@ class Preference
         if (isset(self::$preferences[$name])) {
             return self::$preferences[$name];
         }
-        Debug::warn("Config not found: $name");
+        Debug::warn("Preference not found: $name");
 
         return;
     }
@@ -76,10 +77,26 @@ class Preference
             self::load();
         }
         if (isset(self::$preferences[$name])) {
-            Issue::error("Preference already exists: $name");
+            Debug::error("Preference already exists: $name");
             return false;
         }
         self::$preferences[$name] = $value;
+        return true;
+    }
+
+    public static function removePref($name, $save = false)
+    {
+        if (self::$preferences === false) {
+            self::load();
+        }
+        if (!isset(self::$preferences[$name])) {
+            Debug::error("Preference does not exist: $name");
+            return false;
+        }
+        unset(self::$preferences[$name]);
+        if ($save === true) {
+            self::savePrefs(true);
+        }
         return true;
     }
 }

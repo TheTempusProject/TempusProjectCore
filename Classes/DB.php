@@ -468,6 +468,51 @@ class DB
     }
 
     /**
+     * Builds and executes a database query to to create a table
+     * using the current object's table name and fields.
+     *
+     * NOTE: By default: All tables have an auto incrementing primary key named 'ID'.
+     *
+     * @todo  - Come back and add more versatility here.
+     */
+    public function createTable()
+    {
+        $this->queryStatus = false;
+        if (empty($this->tableBuff)) {
+            Debug::info("No Table set.");
+            
+            return false;
+        }
+        $table = Config::get('database/dbPrefix') . $this->tableBuff;
+        if ($this->tableExists($this->tableBuff)) {
+            Debug::error("Table already exists: $table");
+
+            return false;
+        }
+        $this->queryBuff .= "CREATE TABLE `$table` (";
+        $x = 0;
+        $y = count($this->fieldBuff);
+        while ($x < $y) {
+            $this->queryBuff .= $this->fieldBuff[$x];
+            $x++;
+            $this->queryBuff .= ($x < $y) ? ',' :  '';
+        }
+        $this->queryBuff .= ")  ENGINE=InnoDB DEFAULT CHARSET=latin1; ALTER TABLE `" . $table . "` ADD PRIMARY KEY (`ID`); ";
+        $this->queryBuff .= "ALTER TABLE `" . $table . "` MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Primary index value';";
+        $this->queryStatus = ($this->raw($this->queryBuff) ? true : false);
+    }
+    public function removeTable($name)
+    {
+        if (!$this->tableExists($name)) {
+            Debug::error("No table exists: $name");
+
+            return false;
+        }
+        $table = Config::get('database/dbPrefix') . $name;
+        $this->queryStatus = ($this->raw('DROP TABLE `' . $table . '`') ? true : false);
+        return $this->queryStatus;
+    }
+    /**
      * This function allows you to add a new field to be
      * added to a previously specified table.
      *
@@ -517,40 +562,6 @@ class DB
         return true;
     }
 
-    /**
-     * Builds and executes a database query to to create a table
-     * using the current object's table name and fields.
-     *
-     * NOTE: By default: All tables have an auto incrementing primary key named 'ID'.
-     *
-     * @todo  - Come back and add more versatility here.
-     */
-    public function createTable()
-    {
-        $this->queryStatus = false;
-        if (empty($this->tableBuff)) {
-            Debug::info("No Table set.");
-            
-            return false;
-        }
-        $table = Config::get('database/dbPrefix') . $this->tableBuff;
-        if ($this->tableExists($this->tableBuff)) {
-            Debug::error("Table already exists: $table");
-
-            return false;
-        }
-        $this->queryBuff .= "CREATE TABLE `$table` (";
-        $x = 0;
-        $y = count($this->fieldBuff);
-        while ($x < $y) {
-            $this->queryBuff .= $this->fieldBuff[$x];
-            $x++;
-            $this->queryBuff .= ($x < $y) ? ',' :  '';
-        }
-        $this->queryBuff .= ")  ENGINE=InnoDB DEFAULT CHARSET=latin1; ALTER TABLE `" . $table . "` ADD PRIMARY KEY (`ID`); ";
-        $this->queryBuff .= "ALTER TABLE `" . $table . "` MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Primary index value';";
-        $this->queryStatus = ($this->raw($this->queryBuff) ? true : false);
-    }
 
     public function search($table, $column, $param)
     {

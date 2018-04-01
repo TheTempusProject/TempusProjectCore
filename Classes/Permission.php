@@ -82,4 +82,19 @@ class Permission
         self::$permissions[$name] = $value;
         return true;
     }
+    public static function removePerm($name, $save = false)
+    {
+        if (self::$permissions === false) {
+            self::load();
+        }
+        if (!isset(self::$permissions[$name])) {
+            Debug::error("Permission does not exist: $name");
+            return false;
+        }
+        unset(self::$permissions[$name]);
+        if ($save === true) {
+            self::savePerms(true);
+        }
+        return true;
+    }
 }

@@ -164,6 +164,21 @@ class Config
         self::$config[$name] = [];
         return true;
     }
+    public static function removeConfigCategory($name, $save = false)
+    {
+        if (self::$config === false) {
+            self::load();
+        }
+        if (!isset(self::$config[$name])) {
+            Issue::error("Config does not have ceategory: $name");
+            return false;
+        }
+        unset(self::$config[$name]);
+        if ($save) {
+            self::saveConfig(true);
+        }
+        return true;
+    }
 
     /**
      * Add a new config option for the specified category.
