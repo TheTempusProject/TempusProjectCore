@@ -173,24 +173,29 @@ class Installer extends Controller
             Debug::error('Cannot uninstall model that has not been installed.');
             return false;
         }
-        if (method_exists($docroot->className, 'uninstall')) {
-            if (!call_user_func_array([$docroot->className, 'uninstall'], [])) {
-                $errors[] = ['errorInfo' => "$name failed to execute uninstall properly."];
-                $modelInfo = array_merge($modelInfo, [$Type => 'error']);
-            } else {
-                $modelInfo = array_merge($modelInfo, [$Type => 'success']);
-            }
+        if ($node['installStatus'] === 'not installed') {
+            Debug::error('Cannot uninstall model that has not been installed.');
+            return false;
         }
-
-        $this->setNode($name, $modelInfo, true);
-
+        if (!method_exists($docroot->className, 'uninstall')) {
+            Debug::error('Model has no uninstall method.');
+            return false;
+        }
+        if (!call_user_func_array([$docroot->className, 'uninstall'], [])) {
+            $errors[] = ['errorInfo' => "$name failed to execute uninstall properly."];
+        } else {
+            $node['currentVersion'] = '';
+            $node['installStatus'] = 'uninstalled';
+            $node['lastUpdate'] = time();
+        }
+        $this->setNode($name, $node, true);
         if ($errors !== null) {
             self::$errors = array_merge(self::$errors, $errors);
             Issue::notice("$name did not uninstall properly.");
             return false;
         }
 
-        Issue::success("$name has been installed.");
+        Issue::success("$name has been uninstalled.");
         return true;
     }
 
@@ -248,6 +253,10 @@ class Installer extends Controller
         } else {
             $modelInfo = $node;
         }
+        if ($this->getModelVersion('Models', $name) === $modelInfo['currentVersion'] && $modelInfo['installStatus'] === 'installed') {
+            Issue::notice("$name has already been successfully installed");
+            return false;
+        }
         foreach ($installTypes as $Type) {
             if (!empty($flags[$Type]) && $flags[$Type] === true) {
                 if (!empty($modelInfo[$Type]) && $modelInfo[$Type] == 'success') {
@@ -272,6 +281,7 @@ class Installer extends Controller
                 $modelInfo[$Type] = 'skipped';
             }
         }
+        $modelInfo['currentVersion'] = $this->getModelVersion($folder, $name);
         if ($modelInfo['installStatus'] !== 'partially installed') {
             $modelInfo['installStatus'] = 'installed';
         }
