@@ -174,6 +174,7 @@ class Check
 
             return false;
         }
+        return true;
     }
 
     /**

@@ -6,12 +6,6 @@
  * the application. It handles installing the application, installing and updating
  * models as well as the database, and generating and checking the htaccess file.
  *
- * @todo  - Migrate a lot of the db functions into the DB class instead of here.
- *          Add the ability for the installer to pass the model install if the
- *          columns and stuff it is adding match what is in the database already,
- *          from there expand to update ability
- *          add some debugging
- *
  * @version 1.0
  *
  * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
@@ -49,7 +43,7 @@ class Installer extends Controller
     private static $errors = [];
 
     /**
-     * The constructor...
+     * The constructor
      */
     public function __construct()
     {
@@ -187,6 +181,12 @@ class Installer extends Controller
             $node['currentVersion'] = '';
             $node['installStatus'] = 'uninstalled';
             $node['lastUpdate'] = time();
+        }
+        $installTypes = ['installDB', 'installPermissions', 'installConfigs', 'installResources', 'installPreferences'];
+        foreach ($installTypes as $type) {
+            if ($node[$type] !== 'skipped') {
+                $node[$type] = 'uninstalled';
+            }
         }
         $this->setNode($name, $node, true);
         if ($errors !== null) {
