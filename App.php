@@ -27,6 +27,7 @@ class App
 {
     //Default Controller
     protected $controllerName = 'home';
+    protected $controllerNamespace = null;
 
     //Default Method
     protected $methodName = 'index';
@@ -91,17 +92,16 @@ class App
      */
     private function getMethod()
     {
-        if (empty($this->url[0])) {
+        if (empty($this->url[1])) {
             Debug::info('No Method Specified');
             return $this->methodName;
         }
-        if (method_exists($this->controllerNameFull, $this->url[0])) {
-            Debug::log("Modifying the method from $this->methodName to " . $this->url[0]);
-            $out = array_shift($this->url);
-            return strtolower($out);
+        if (method_exists($this->controllerNamespace, $this->url[1])) {
+            Debug::log("Modifying the method from $this->methodName to " . $this->url[1]);
+            $this->methodName = strtolower($this->url[1]);
+            return $this->methodName;
         }
-        Debug::info('Method not found: ' . $this->url[0] . ', loading default.');
-        array_shift($this->url);
+        Debug::info('Method not found: ' . $this->url[1] . ', loading default.');
         return $this->methodName;
     }
 
@@ -161,8 +161,9 @@ class App
     private function updateController()
     {
         Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
+
     }
-    
+
     /**
      * This function Initiates the specified controller and
      * stores it as an object in controllerObject.
@@ -170,7 +171,7 @@ class App
     private function loadController()
     {
         Debug::group("Initiating controller: $this->controllerName", 1);
-        $this->controllerObject = new $this->controllerNameFull;
+        $this->controllerObject = new $this->controllerNamespace;
         Debug::gend();
     }
 
