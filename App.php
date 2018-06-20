@@ -185,7 +185,7 @@ class App
             // remove the method
             array_shift($url);
         }
-        $out = !empty($url[0]) ? array_values($this->url) : []
+        $out = !empty($url[0]) ? array_values($url) : [];
         return $out;
     }
     /**
