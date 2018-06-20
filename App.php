@@ -41,11 +41,11 @@ class App
      * finding the controller/method, and calling the appropriate
      * class/function for the application.
      *
-     * @param string $urlDirected     - A custom URL to be parsed to determine
+     * @param string $url     - A custom URL to be parsed to determine
      *                                controller/method. (GET) url is used by
      *                                default if none is provided
      */
-    public function __construct($urlDirected = null)
+    public function __construct($url = false)
     {
         Debug::group('TPC Application');
         Debug::log("Class Initiated: " . __CLASS__);
@@ -54,17 +54,14 @@ class App
         $this->path = Routes::getLocation('controllers')->folder;
 
         // Set the application url to be used
-        if (!empty($urlDirected)) {
+        if ($url !== false) {
             $this->directed = true;
-            $this->url = Routes::parseUrl($urlDirected);
-        } else {
-            $this->url = Routes::parseUrl();
         }
+        $this->url = Routes::parseUrl($url);
 
-        // Find the Controller
-        $this->controllerName = $this->getController();
-        define('CORE_CONTROLLER', $this->controllerName);
-        $this->controllerNameFull = (string) APP_SPACE . '\\Controllers\\' . $this->controllerName;
+        // Set the controller default
+        $this->getController();
+        $this->setController();
 
         // Ensure the controller is required
         Debug::log("Requiring Controller: $this->controllerName");
@@ -108,6 +105,18 @@ class App
         return $this->methodName;
     }
 
+    private function setController($name = null)
+    {
+        if (empty($name)) {
+            define('CORE_CONTROLLER', $this->controllerName);
+            $this->controllerNamespace = (string) APP_SPACE . '\\Controllers\\' . $this->controllerName;
+            return true;
+        }
+        define('CORE_CONTROLLER', $name);
+        $this->controllerNamespace = (string) APP_SPACE . '\\Controllers\\' . $name;
+        return true;
+    }
+
     /**
      * Using the $url array, this function will define the controller
      * name and path to be used. If the $urlDirected flag was used,
@@ -127,31 +136,33 @@ class App
             Debug::info('No Controller Specified.');
             return $this->controllerName;
         }
+        if (file_exists(Routes::getFull() . $this->url[0])) {
+            $this->path = $this->path . $this->url[0] . '/';
+            array_shift($this->url);
+            Debug::Info('Modifying controller location to: ' . $this->path);
+        }
         if ($this->directed) {
             if (file_exists(Routes::getFull() . $this->url[0] . '.php')) {
                 Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
-                $out = array_shift($this->url);
                 $this->path = Routes::getFull();
-                return strtolower($out);
-            } elseif (file_exists($this->path . $this->url[0] . '.php')) {
-                Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
-                $out = array_shift($this->url);
-                return strtolower($out);
+                $this->controllerName = strtolower($this->url[0]);
+                return $this->controllerName;
             }
         }
-        if (!$this->directed && file_exists($this->path . $this->url[0] . '.php')) {
+        if (file_exists($this->path . $this->url[0] . '.php')) {
             Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
-            $out = array_shift($this->url);
-            return strtolower($out);
+            $this->controllerName = strtolower($this->url[0]);
+            return $this->controllerName;
         }
         Debug::info('Could not locate specified controller: ' . $this->url[0]);
-        array_shift($this->url);
         return $this->controllerName;
     }
+
     private function updateController()
     {
         Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
     }
+    
     /**
      * This function Initiates the specified controller and
      * stores it as an object in controllerObject.

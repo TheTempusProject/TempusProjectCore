@@ -252,9 +252,9 @@ class Routes
      *
      * @return array   - The filtered and exploded (GET) URL.
      */
-    public static function parseUrl($url = null)
+    public static function parseUrl($url = false)
     {
-        if (!empty($url)) {
+        if ($url !== false) {
             Debug::info('Using provided URL.');
             return explode('/', filter_var(rtrim($url, '/'), FILTER_SANITIZE_URL));
         }
