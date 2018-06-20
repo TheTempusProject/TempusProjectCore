@@ -174,14 +174,27 @@ class App
         $this->controllerObject = new $this->controllerNamespace;
         Debug::gend();
     }
-
+    private function getParams()
+    {
+        $url = $this->url;
+        if (!empty($url[0])) {
+            // remove the controller
+            array_shift($url);
+        }
+        if (!empty($url[0])) {
+            // remove the method
+            array_shift($url);
+        }
+        $out = !empty($url[0]) ? array_values($this->url) : []
+        return $out;
+    }
     /**
      * This function calls the application method/function from the
      * controllerObject.
      */
     private function loadMethod()
     {
-        $this->params = $this->url ? array_values($this->url) : [];
+        $this->params = $this->getParams();
         Debug::group("Initiating method : $this->methodName", 1);
         call_user_func_array([$this->controllerObject, $this->methodName], $this->params);
         Debug::gend();
