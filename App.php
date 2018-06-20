@@ -31,8 +31,6 @@ class App
     //Default Method
     protected $methodName = 'index';
 
-    protected $controllerPath = null;
-    protected $indexPath = null;
     protected $path = null;
     protected $directed = false;
     protected $params = [];
@@ -52,9 +50,8 @@ class App
         Debug::group('TPC Application');
         Debug::log("Class Initiated: " . __CLASS__);
 
-        // Set Default Controller Locations
-        $this->controllerPath = Routes::getLocation('controllers')->folder;
-        $this->indexPath = Routes::getFull();
+        // Set Default Controller Location
+        $this->path = Routes::getLocation('controllers')->folder;
 
         // Set the application url to be used
         if (!empty($urlDirected)) {
@@ -128,34 +125,33 @@ class App
     {
         if (empty($this->url[0])) {
             Debug::info('No Controller Specified.');
-            $this->path = $this->controllerPath;
             return $this->controllerName;
         }
         if ($this->directed) {
-            if (file_exists($this->indexPath . $this->url[0] . '.php')) {
+            if (file_exists(Routes::getFull() . $this->url[0] . '.php')) {
                 Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
                 $out = array_shift($this->url);
-                $this->path = $this->indexPath;
+                $this->path = Routes::getFull();
                 return strtolower($out);
-            } elseif (file_exists($this->controllerPath . $this->url[0] . '.php')) {
+            } elseif (file_exists($this->path . $this->url[0] . '.php')) {
                 Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
                 $out = array_shift($this->url);
-                $this->path = $this->controllerPath;
                 return strtolower($out);
             }
         }
-        if (!$this->directed && file_exists($this->controllerPath . $this->url[0] . '.php')) {
+        if (!$this->directed && file_exists($this->path . $this->url[0] . '.php')) {
             Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
             $out = array_shift($this->url);
-            $this->path = $this->controllerPath;
             return strtolower($out);
         }
         Debug::info('Could not locate specified controller: ' . $this->url[0]);
-        $this->path = $this->controllerPath;
         array_shift($this->url);
         return $this->controllerName;
     }
-
+    private function updateController()
+    {
+        Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
+    }
     /**
      * This function Initiates the specified controller and
      * stores it as an object in controllerObject.
