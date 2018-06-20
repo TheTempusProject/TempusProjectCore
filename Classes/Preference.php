@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Functions\Routes;
 use TempusProjectCore\Classes\Debug;
 
 class Preference
@@ -31,11 +31,11 @@ class Preference
 
     public static function getPrefs()
     {
-        $docLocation = Docroot::getLocation('appPreferences');
+        $docLocation = Routes::getLocation('appPreferences');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('appPreferencesDefault');
+            $docLocation = Routes::getLocation('appPreferencesDefault');
             if ($docLocation->error) {
-                $docLocation = Docroot::getLocation('preferencesDefault');
+                $docLocation = Routes::getLocation('preferencesDefault');
             }
         }
         return json_decode(file_get_contents($docLocation->fullPath), true);
@@ -60,12 +60,12 @@ class Preference
             self::load();
         }
         if ($default) {
-            if (file_put_contents(Docroot::getLocation('appPreferencesDefault')->fullPath, json_encode(self::$preferences))) {
+            if (file_put_contents(Routes::getLocation('appPreferencesDefault')->fullPath, json_encode(self::$preferences))) {
                 return true;
             }
             return false;
         }
-        if (file_put_contents(Docroot::getLocation('appPreferences')->fullPath, json_encode(self::$preferences))) {
+        if (file_put_contents(Routes::getLocation('appPreferences')->fullPath, json_encode(self::$preferences))) {
             return true;
         }
         return false;

@@ -20,7 +20,7 @@ namespace TempusProjectCore;
 
 use TempusProjectCore\Classes\Debug as Debug;
 use TempusProjectCore\Classes\Config as Config;
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 use TempusProjectCore\Classes\Input as Input;
 
 class App
@@ -53,15 +53,15 @@ class App
         Debug::log("Class Initiated: " . __CLASS__);
 
         // Set Default Controller Locations
-        $this->controllerPath = Docroot::getFull() . 'Controllers/';
-        $this->indexPath = Docroot::getFull();
+        $this->controllerPath = Routes::getLocation('controllers')->folder;
+        $this->indexPath = Routes::getFull();
 
         // Set the application url to be used
         if (!empty($urlDirected)) {
             $this->directed = true;
-            $this->url = Docroot::parseUrl($urlDirected);
+            $this->url = Routes::parseUrl($urlDirected);
         } else {
-            $this->url = Docroot::parseUrl();
+            $this->url = Routes::parseUrl();
         }
 
         // Find the Controller
@@ -71,7 +71,7 @@ class App
 
         // Ensure the controller is required
         Debug::log("Requiring Controller: $this->controllerName");
-        require $this->path . $this->controllerName . '.php'; // docroot
+        require $this->path . $this->controllerName . '.php';
 
         // Find the Method
         $this->methodName = $this->getMethod();
@@ -128,30 +128,30 @@ class App
     {
         if (empty($this->url[0])) {
             Debug::info('No Controller Specified.');
-            $this->path = $this->controllerPath; // docroot
+            $this->path = $this->controllerPath;
             return $this->controllerName;
         }
         if ($this->directed) {
             if (file_exists($this->indexPath . $this->url[0] . '.php')) {
                 Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
                 $out = array_shift($this->url);
-                $this->path = $this->indexPath; // docroot
+                $this->path = $this->indexPath;
                 return strtolower($out);
             } elseif (file_exists($this->controllerPath . $this->url[0] . '.php')) {
                 Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
                 $out = array_shift($this->url);
-                $this->path = $this->controllerPath; // docroot
+                $this->path = $this->controllerPath;
                 return strtolower($out);
             }
         }
         if (!$this->directed && file_exists($this->controllerPath . $this->url[0] . '.php')) {
             Debug::log("Modifying the controller from $this->controllerName to " . $this->url[0]);
             $out = array_shift($this->url);
-            $this->path = $this->controllerPath; // docroot
+            $this->path = $this->controllerPath;
             return strtolower($out);
         }
         Debug::info('Could not locate specified controller: ' . $this->url[0]);
-        $this->path = $this->controllerPath; // docroot
+        $this->path = $this->controllerPath;
         array_shift($this->url);
         return $this->controllerName;
     }

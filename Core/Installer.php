@@ -32,7 +32,7 @@ use TempusProjectCore\Classes\Pagination;
 use TempusProjectCore\Classes\Issue;
 use TempusProjectCore\Classes\Hash;
 use TempusProjectCore\Classes\Token;
-use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Functions\Routes;
 use TempusProjectCore\Classes\CustomException;
 
 class Installer extends Controller
@@ -71,7 +71,7 @@ class Installer extends Controller
 
     public function getModelVersion($folder, $name)
     {
-        $docroot = Docroot::getLocation('models', $name, $folder);
+        $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
             Issue::error("$name was not installed: $docroot->errorString");
             return false;
@@ -87,7 +87,7 @@ class Installer extends Controller
 
     public function getModelList($folder)
     {
-        $dir = Docroot::getFull() . $folder;
+        $dir = Routes::getFull() . $folder;
         if (!file_exists($dir)) {
             Issue::error('Models folder is missing.');
             return false;
@@ -155,7 +155,7 @@ class Installer extends Controller
     public function uninstallModel($folder, $name, $flags = null)
     {
         Debug::log('Uninstalling Model: ' . $name);
-        $docroot = Docroot::getLocation('models', $name, $folder);
+        $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
             Issue::error("$name was not installed: $docroot->errorString");
             return false;
@@ -212,7 +212,7 @@ class Installer extends Controller
     {
         Debug::log('Installing Model: ' . $name);
         $errors = null;
-        $docroot = Docroot::getLocation('models', $name, $folder);
+        $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
             Debug::error("$name was not installed: $docroot->errorString");
             return false;
@@ -309,7 +309,7 @@ class Installer extends Controller
     protected function generateHtaccess($docroot = null, $rewrite = true)
     {
         if (empty($docroot)) {
-            $docroot = Docroot::getRoot();
+            $docroot = Routes::getRoot();
         }
         $out = "";
         if ($rewrite === true) {
@@ -351,11 +351,11 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
     protected function buildHtaccess()
     {
         $write = '';
-        if (file_exists(Docroot::getLocation('htaccess')->fullPath)) {
-            $currentHtaccess = file_get_contents(Docroot::getLocation('htaccess')->fullPath);
+        if (file_exists(Routes::getLocation('htaccess')->fullPath)) {
+            $currentHtaccess = file_get_contents(Routes::getLocation('htaccess')->fullPath);
             if ($currentHtaccess !== $this->generateHtaccess()) {
                 $findRewrite1 = "RewriteEngine On";
-                $findRewrite2 = "\nRewriteBase " . Docroot::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
+                $findRewrite2 = "\nRewriteBase " . Routes::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
                 if (stripos($currentHtaccess, $findRewrite1) === false) {
                     $write .= $this->generateHtaccess();
                 } elseif (stripos($currentHtaccess, $findRewrite2) === false) {
@@ -368,7 +368,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
             $write = $this->generateHtaccess();
         }
 
-        file_put_contents(Docroot::getLocation('htaccess')->fullPath, $write);
+        file_put_contents(Routes::getLocation('htaccess')->fullPath, $write);
         return true;
     }
 
@@ -390,14 +390,14 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
      */
     public function checkHtaccess($create = false)
     {
-        if (file_exists(Docroot::getLocation('htaccess')->fullPath)) {
-            $htaccess = file_get_contents(Docroot::getLocation('htaccess')->fullPath);
+        if (file_exists(Routes::getLocation('htaccess')->fullPath)) {
+            $htaccess = file_get_contents(Routes::getLocation('htaccess')->fullPath);
             if ($htaccess === $this->generateHtaccess()) {
                 return true;
             }
             $check = 0;
             $findRewrite1 = "RewriteEngine On\n";
-            $findRewrite2 = "RewriteBase " . Docroot::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-l\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
+            $findRewrite2 = "RewriteBase " . Routes::getRoot() . "\nRewriteCond %{REQUEST_FILENAME} !-d\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteCond %{REQUEST_FILENAME} !-l\nRewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
             if (stripos($htaccess, $findRewrite1)) {
                 $check++;
             }
@@ -468,7 +468,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
 
     public function getComposerJson()
     {
-        $docLocation = Docroot::getLocation('composerJson');
+        $docLocation = Routes::getLocation('composerJson');
         if ($docLocation->error) {
             Debug::error('No install json found.');
             return false;
@@ -478,7 +478,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
 
     public function getComposerLock()
     {
-        $docLocation = Docroot::getLocation('composerLock');
+        $docLocation = Routes::getLocation('composerLock');
         if ($docLocation->error) {
             Debug::error('No install json found.');
             return false;
@@ -488,7 +488,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
 
     public function getJson()
     {
-        $docLocation = Docroot::getLocation('installer');
+        $docLocation = Routes::getLocation('installer');
         if ($docLocation->error) {
             Debug::error('No install json found.');
             return false;
@@ -508,7 +508,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
 
     public function saveJson()
     {
-        if (file_put_contents(Docroot::getLocation('installer')->fullPath, json_encode(self::$installJson))) {
+        if (file_put_contents(Routes::getLocation('installer')->fullPath, json_encode(self::$installJson))) {
             return true;
         }
         return false;

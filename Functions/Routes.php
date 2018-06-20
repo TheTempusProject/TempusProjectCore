@@ -1,6 +1,6 @@
 <?php
 /**
- * Functions/Docroot.php
+ * Functions/Routes.php
  *
  * This class is used to easily return file and document location information.
  *
@@ -18,7 +18,7 @@ namespace TempusProjectCore\Functions;
 use TempusProjectCore\Classes\Input;
 use TempusProjectCore\Classes\Debug;
 
-class Docroot
+class Routes
 {
     /**
      * Finds the correct directory for the specified type.
@@ -34,7 +34,7 @@ class Docroot
                 if ($folder != null) {
                     $locationData['folder'] = $folder . '/';
                 } else {
-                    $locationData['folder'] = 'Models/';
+                    $locationData['folder'] = 'App/Models/';
                 }
                 $locationData['file'] = $file . '.php';
                 $file = ucfirst($file);
@@ -46,19 +46,28 @@ class Docroot
             case 'views':
                 $viewName = strtolower(str_replace('.', '_', $file));
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'Views/';
-                $locationData['file'] = 'view_' . $viewName . '.php';
+                $locationData['folder'] = 'App/Views/';
+                $locationData['file'] = $viewName . '.php';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'View could not be found: ' . $locationData['fullPath'];
                 break;
 
             case 'controllers':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'Controllers/';
+                $locationData['folder'] = 'App/Controllers/';
                 $locationData['file'] = $file . '.php';
                 $locationData['className'] = APP_SPACE . '\Controllers\\' . $file;
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Controller could not be found: ' . $locationData['fullPath'];
+                break;
+
+            case 'adminControllers':
+                $locationData['root'] = self::getFull();
+                $locationData['folder'] = 'App/Controllers/Admin/';
+                $locationData['file'] = $file . '.php';
+                $locationData['className'] = APP_SPACE . '\Controllers\\' . $file;
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                $locationData['errorString'] = 'Admin Controller could not be found: ' . $locationData['fullPath'];
                 break;
 
             case 'template':
@@ -80,7 +89,7 @@ class Docroot
 
             case 'errors':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'Errors/';
+                $locationData['folder'] = 'App/Errors/';
                 $locationData['file'] = $file . '.php';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Error could not be found: ' . $locationData['fullPath'];
@@ -88,7 +97,7 @@ class Docroot
 
             case 'appConfig':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'config.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Application config could not be found: ' . $locationData['fullPath'];
@@ -96,7 +105,7 @@ class Docroot
 
             case 'appConfigDefault':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'config.default.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Default application config could not be found: ' . $locationData['fullPath'];
@@ -112,7 +121,7 @@ class Docroot
 
             case 'appPreferences':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'preferences.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Application preferences could not be found: ' . $locationData['fullPath'];
@@ -120,7 +129,7 @@ class Docroot
 
             case 'appPreferencesDefault':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'preferences.default.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Default application preferences could not be found: ' . $locationData['fullPath'];
@@ -136,7 +145,7 @@ class Docroot
 
             case 'appPermissions':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'permissions.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Application permissions could not be found: ' . $locationData['fullPath'];
@@ -144,7 +153,7 @@ class Docroot
 
             case 'appPermissionsDefault':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'permissions.default.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Default application permissions could not be found: ' . $locationData['fullPath'];
@@ -176,7 +185,7 @@ class Docroot
 
             case 'formChecks':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Bin/';
                 $locationData['file'] = 'forms.php';
                 $locationData['className'] = APP_SPACE . '\\Forms';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
@@ -185,7 +194,7 @@ class Docroot
 
             case 'filters':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Bin/';
                 $locationData['file'] = 'filters.php';
                 $locationData['className'] = APP_SPACE . '\\Filters';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
@@ -194,7 +203,7 @@ class Docroot
 
             case 'installer':
                 $locationData['root'] = self::getFull();
-                $locationData['folder'] = 'App/';
+                $locationData['folder'] = 'Config/';
                 $locationData['file'] = 'install.json';
                 $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Install config could not be found.';
@@ -257,8 +266,8 @@ class Docroot
         $unixFriendly = str_replace('\\', '/', __DIR__);
         $fullArray = explode('/', $unixFriendly);
         array_pop($fullArray);
-        $docroot = implode('/', $fullArray) . '/';
-        return $docroot;
+        $route = implode('/', $fullArray) . '/';
+        return $route;
     }
     /**
      * Finds the root directory of the application.
@@ -269,8 +278,8 @@ class Docroot
     {
         $fullArray = explode('/', $_SERVER['PHP_SELF']);
         array_pop($fullArray);
-        $docroot = implode('/', $fullArray) . '/';
-        return $docroot;
+        $route = implode('/', $fullArray) . '/';
+        return $route;
     }
 
     /**
@@ -310,12 +319,12 @@ class Docroot
     {
         $fullArray = explode('/', $_SERVER['PHP_SELF']);
         $start = array_pop($fullArray);
-        $docroot = implode('/', $fullArray) . '/';
+        $route = implode('/', $fullArray) . '/';
         Debug::info('PHP_SELF: ' . $_SERVER['PHP_SELF']);
         Debug::info('Full array from PHP_SELF: ');
         Debug::v($fullArray);
         Debug::info('array pop: ' . $start);
-        Debug::info('Docroot: ' . $docroot);
+        Debug::info('Route: ' . $route);
     }
 
     /**

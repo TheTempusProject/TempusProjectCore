@@ -16,7 +16,7 @@
 namespace TempusProjectCore\Classes;
 
 use TempusProjectCore\Core\Template as Template;
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Email
 {
@@ -201,7 +201,7 @@ class Email
             self::$header = 'From: ' . Config::get('main/name') . ' <noreply@' . $_SERVER['HTTP_HOST'] . ">\r\n";
             self::$header .= "MIME-Version: 1.0\r\n";
             self::$header .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
-            $url = parse_url(Docroot::getAddress(), PHP_URL_HOST);
+            $url = parse_url(Routes::getAddress(), PHP_URL_HOST);
             $parts = explode(".", $url);
             $count = count($parts);
             if ($count > 2) {

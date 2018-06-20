@@ -18,10 +18,10 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Functions\Routes;
 use TempusProjectCore\Core\Installer;
 
-require_once Docroot::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
+require_once Routes::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
 
 use TempusDebugger\TempusDebugger;
 

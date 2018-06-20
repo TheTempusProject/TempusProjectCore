@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Config
 {
@@ -52,11 +52,11 @@ class Config
      */
     public static function getConfig()
     {
-        $docLocation = Docroot::getLocation('appConfig');
+        $docLocation = Routes::getLocation('appConfig');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('appConfigDefault');
+            $docLocation = Routes::getLocation('appConfigDefault');
             if ($docLocation->error) {
-                $docLocation = Docroot::getLocation('configDefault');
+                $docLocation = Routes::getLocation('configDefault');
             }
         }
         return json_decode(file_get_contents($docLocation->fullPath), true);
@@ -135,11 +135,11 @@ class Config
             self::load();
         }
         if ($default) {
-            if (!file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
+            if (!file_put_contents(Routes::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
                 return false;
             }
         }
-        if (file_put_contents(Docroot::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
+        if (file_put_contents(Routes::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
             return true;
         }
         return false;
@@ -254,7 +254,7 @@ class Config
      */
     public static function generateConfig($mods = [])
     {
-        $docLocation = Docroot::getLocation('appConfig');
+        $docLocation = Routes::getLocation('appConfig');
         if (!$docLocation->error) {
             if (!self::$override) {
                 Debug::error('config file already exists');
@@ -263,9 +263,9 @@ class Config
             }
         }
 
-        $docLocation = Docroot::getLocation('appConfigDefault');
+        $docLocation = Routes::getLocation('appConfigDefault');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('configDefault');
+            $docLocation = Routes::getLocation('configDefault');
         }
 
         self::$config = json_decode(file_get_contents($docLocation->fullPath), true);

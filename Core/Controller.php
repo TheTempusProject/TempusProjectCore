@@ -20,7 +20,7 @@ namespace TempusProjectCore\Core;
 
 use TempusProjectCore\Classes\CustomException;
 use TempusProjectCore\Classes\Pagination;
-use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Functions\Routes;
 use TempusProjectCore\Classes\Session;
 use TempusProjectCore\Classes\Cookie;
 use TempusProjectCore\Classes\Config;
@@ -77,15 +77,15 @@ class Controller
     {
         Debug::group("Controller Constructor", 1);
         Issue::checkSessions();
-        Debug::warn('Requested URL: ' . Docroot::getUrl());
-        self::$base = Docroot::getAddress();
-        self::$location = Docroot::getFull();
+        Debug::warn('Requested URL: ' . Routes::getUrl());
+        self::$base = Routes::getAddress();
+        self::$location = Routes::getFull();
         self::$cookiePrefix = Config::get('cookie/cookiePrefix');
         self::$sessionPrefix = Config::get('session/sessionPrefix');
         self::$db = DB::getInstance();
         self::$template = new Template();
-        self::$activeGroup = json_decode(file_get_contents(Docroot::getLocation('permissionsDefault')->fullPath), true);
-        self::$activePrefs = json_decode(file_get_contents(Docroot::getLocation('preferencesDefault')->fullPath));
+        self::$activeGroup = json_decode(file_get_contents(Routes::getLocation('permissionsDefault')->fullPath), true);
+        self::$activePrefs = json_decode(file_get_contents(Routes::getLocation('preferencesDefault')->fullPath));
         Debug::gend();
     }
 
@@ -120,7 +120,7 @@ class Controller
     protected function model($modelName)
     {
         Debug::group("Model: $modelName", 1);
-        $docLocation = Docroot::getLocation('models', $modelName);
+        $docLocation = Routes::getLocation('models', $modelName);
         if ($docLocation->error) {
             new CustomException('model', $docLocation->errorString);
         } else {

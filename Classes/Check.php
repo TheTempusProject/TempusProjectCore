@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Check
 {
@@ -26,7 +26,7 @@ class Check
     private static $errorLogUser = [];
 
     /**
-     * Creates a new DB connection, but only if we need it.
+     * Creates a new DB instance, but only if we need it.
      */
     public static function connect()
     {
@@ -121,7 +121,7 @@ class Check
     public static function form($name)
     {
         if (empty(self::$formValidator)) {
-            $docLocation = Docroot::getLocation('formChecks');
+            $docLocation = Routes::getLocation('formChecks');
             if ($docLocation->error) {
                 self::addError($docLocation->errorString);
 

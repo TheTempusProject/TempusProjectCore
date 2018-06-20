@@ -18,7 +18,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Image
 {
@@ -33,18 +33,16 @@ class Image
      * @param  string $folder - The sub-folder to store the uploaded image.
      *
      * @return boolean
-     *
-     * @todo  this folder stuff could be handled by the docroot function
      */
     public static function upload($fieldname, $folder)
     {
-        $uploaddir = Docroot::getLocation('imageUploadFolder', $folder)->fullPath;
+        $uploaddir = Routes::getLocation('imageUploadFolder', $folder)->fullPath;
         if (!Check::imageUpload($fieldname)) {
             Debug::error(Check::systemErrors());
             return false;
         }
         // @todo Let's try and avoid 777 if possible
-        //       Try catch here for better error handling
+        // Try catch here for better error handling
         if (!file_exists($uploaddir)) {
             Debug::Info('Creating Directory because it does not exist');
             mkdir($uploaddir, 0777, true);

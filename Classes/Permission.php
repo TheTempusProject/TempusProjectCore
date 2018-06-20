@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Permission
 {
@@ -30,11 +30,11 @@ class Permission
 
     public static function getPerms()
     {
-        $docLocation = Docroot::getLocation('appPermissions');
+        $docLocation = Routes::getLocation('appPermissions');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('appPermissionsDefault');
+            $docLocation = Routes::getLocation('appPermissionsDefault');
             if ($docLocation->error) {
-                $docLocation = Docroot::getLocation('permissionsDefault');
+                $docLocation = Routes::getLocation('permissionsDefault');
             }
         }
         return json_decode(file_get_contents($docLocation->fullPath), true);
@@ -59,12 +59,12 @@ class Permission
             self::load();
         }
         if ($default) {
-            if (file_put_contents(Docroot::getLocation('appPermissionsDefault')->fullPath, json_encode(self::$permissions))) {
+            if (file_put_contents(Routes::getLocation('appPermissionsDefault')->fullPath, json_encode(self::$permissions))) {
                 return true;
             }
             return false;
         }
-        if (file_put_contents(Docroot::getLocation('appPermissions')->fullPath, json_encode(self::$permissions))) {
+        if (file_put_contents(Routes::getLocation('appPermissions')->fullPath, json_encode(self::$permissions))) {
             return true;
         }
         return false;
