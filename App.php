@@ -136,7 +136,7 @@ class App
             Debug::info('No Controller Specified.');
             return $this->controllerName;
         }
-        if (file_exists(Routes::getFull() . $this->url[0])) {
+        if (file_exists($this->path . ucfirst($this->url[0]))) {
             $this->path = $this->path . $this->url[0] . '/';
             array_shift($this->url);
             Debug::Info('Modifying controller location to: ' . $this->path);
