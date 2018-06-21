@@ -85,12 +85,12 @@ class Installer extends Controller
         return $version;
     }
 
-    public function getModelList($folder)
+    public function getModelList($folder = null)
     {
-        $dir = Routes::getFull() . $folder;
+        $dir = Routes::getLocation('models', '', $folder)->folder;
         if (!file_exists($dir)) {
-            Issue::error('Models folder is missing.');
-            return false;
+            Issue::error('Models folder is missing: ' . $dir);
+            return [];
         }
         $files = scandir($dir);
         array_shift($files);
@@ -101,7 +101,7 @@ class Installer extends Controller
         return $modelList;
     }
 
-    public function getModelVersionList($folder)
+    public function getModelVersionList($folder = null)
     {
         $modelsList = $this->getModelList($folder);
         foreach ($modelsList as $model) {
