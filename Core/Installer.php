@@ -24,7 +24,6 @@ use TempusProjectCore\Classes\Session;
 use TempusProjectCore\Classes\Cookie;
 use TempusProjectCore\Classes\Code;
 use TempusProjectCore\Classes\Redirect;
-use TempusProjectCore\Classes\Log;
 use TempusProjectCore\Classes\Check;
 use TempusProjectCore\Classes\Input;
 use TempusProjectCore\Classes\Email;
