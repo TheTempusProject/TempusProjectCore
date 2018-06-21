@@ -69,7 +69,7 @@ class Installer extends Controller
         return self::$errors;
     }
 
-    public function getModelVersion($folder, $name)
+    public function getModelVersion($name, $folder = null)
     {
         $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
@@ -107,7 +107,7 @@ class Installer extends Controller
         foreach ($modelsList as $model) {
             $modelList[] = (object) [
                 'name' => $model,
-                'version' => $this->getModelVersion($folder, $model),
+                'version' => $this->getModelVersion($model),
             ];
         }
         return $modelList;
@@ -139,7 +139,7 @@ class Installer extends Controller
         Debug::log('Installing selected models in folder: ' . $directory);
         foreach ($modelList as $key => $value) {
             if ($value === true) {
-                if (!$this->installModel($directory, $key, $flags)) {
+                if (!$this->installModel($key, $directory, $flags)) {
                     $fail = true;
                 }
             }
@@ -152,7 +152,7 @@ class Installer extends Controller
         return false;
     }
 
-    public function uninstallModel($folder, $name, $flags = null)
+    public function uninstallModel($name, $folder = null, $flags = null)
     {
         Debug::log('Uninstalling Model: ' . $name);
         $docroot = Routes::getLocation('models', $name, $folder);
@@ -208,7 +208,7 @@ class Installer extends Controller
      *
      * @return boolean
      */
-    public function installModel($folder, $name, $flags = null)
+    public function installModel($name, $folder=null, $flags = null)
     {
         Debug::log('Installing Model: ' . $name);
         $errors = null;
@@ -248,12 +248,12 @@ class Installer extends Controller
                 'installDate' => time(),
                 'lastUpdate' => time(),
                 'installStatus' => 'not installed',
-                'currentVersion' => $this->getModelVersion($folder, $name)
+                'currentVersion' => $this->getModelVersion($name)
             ];
         } else {
             $modelInfo = $node;
         }
-        if ($this->getModelVersion('Models', $name) === $modelInfo['currentVersion'] && $modelInfo['installStatus'] === 'installed') {
+        if ($this->getModelVersion($name) === $modelInfo['currentVersion'] && $modelInfo['installStatus'] === 'installed') {
             Issue::notice("$name has already been successfully installed");
             return false;
         }
@@ -281,7 +281,7 @@ class Installer extends Controller
                 $modelInfo[$Type] = 'skipped';
             }
         }
-        $modelInfo['currentVersion'] = $this->getModelVersion($folder, $name);
+        $modelInfo['currentVersion'] = $this->getModelVersion($name);
         if ($modelInfo['installStatus'] !== 'partially installed') {
             $modelInfo['installStatus'] = 'installed';
         }
