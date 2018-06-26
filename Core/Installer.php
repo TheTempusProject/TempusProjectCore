@@ -28,7 +28,6 @@ use TempusProjectCore\Classes\Check;
 use TempusProjectCore\Classes\Input;
 use TempusProjectCore\Classes\Email;
 use TempusProjectCore\Classes\Pagination;
-use TempusProjectCore\Classes\Issue;
 use TempusProjectCore\Classes\Hash;
 use TempusProjectCore\Classes\Token;
 use TempusProjectCore\Functions\Routes;
@@ -72,7 +71,7 @@ class Installer extends Controller
     {
         $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
-            Issue::error("$name was not installed: $docroot->errorString");
+            self::$errors = array_merge(self::$errors, ['errorInfo' => "$name was not installed: $docroot->errorString"]);
             return false;
         }
         require_once $docroot->fullPath;
@@ -88,7 +87,7 @@ class Installer extends Controller
     {
         $dir = Routes::getLocation('models', '', $folder)->folder;
         if (!file_exists($dir)) {
-            Issue::error('Models folder is missing: ' . $dir);
+            self::$errors = array_merge(self::$errors, ['errorInfo' => "Models folder is missing: $dir"]);
             return [];
         }
         $files = scandir($dir);
@@ -123,7 +122,7 @@ class Installer extends Controller
      *
      * @return boolean
      */
-    public function installModels($directory = 'Models', $modelList = [], $flags = null)
+    public function installModels($directory = null, $modelList = [], $flags = null)
     {
         self::$db = DB::getInstance('', '', '', '', true);
         $query = 'SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -156,7 +155,7 @@ class Installer extends Controller
         Debug::log('Uninstalling Model: ' . $name);
         $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
-            Issue::error("$name was not installed: $docroot->errorString");
+            self::$errors = array_merge(self::$errors, ['errorInfo' => "$name was not installed: $docroot->errorString"]);
             return false;
         }
         $errors = null;
@@ -189,12 +188,12 @@ class Installer extends Controller
         }
         $this->setNode($name, $node, true);
         if ($errors !== null) {
+            $errors[] = ['errorInfo' => "$name did not uninstall properly."];
             self::$errors = array_merge(self::$errors, $errors);
-            Issue::notice("$name did not uninstall properly.");
             return false;
         }
+        self::$errors = array_merge(self::$errors, ['errorInfo' => "$name has been uninstalled."]);
 
-        Issue::success("$name has been uninstalled.");
         return true;
     }
 
@@ -207,40 +206,21 @@ class Installer extends Controller
      *
      * @return boolean
      */
-    public function installModel($name, $folder=null, $flags = null)
+    public function installModel($name, $folder = null, $flags = null)
     {
         Debug::log('Installing Model: ' . $name);
         $errors = null;
+
+        //require the files
         $docroot = Routes::getLocation('models', $name, $folder);
         if ($docroot->error) {
             Debug::error("$name was not installed: $docroot->errorString");
             return false;
         }
         require_once $docroot->fullPath;
+
+        // Set the model info
         $node = $this->getNode($name);
-        if (method_exists($docroot->className, 'installFlags')) {
-            if (!$modelFlags = call_user_func_array([$docroot->className, 'installFlags'], [])) {
-                $errors[] = ['errorInfo' => "$name failed to execute installFlags properly."];
-            }
-        }
-        $installTypes = ['installDB', 'installPermissions', 'installConfigs', 'installResources', 'installPreferences'];
-        foreach ($installTypes as $type) {
-            if (isset($flags[$type])) {
-                // This is the safeguard for when a model doesn't have an installer you are requiring
-                if (isset($modelFlags[$type]) && $modelFlags[$type] === false) {
-                    $out[$type] = false;
-                } else {
-                    $out[$type] = $flags[$type];
-                }
-            } else {
-                if (isset($modelFlags[$type])) {
-                    $out[$type] = $modelFlags[$type];
-                } else {
-                    $out[$type] = true;
-                }
-            }
-        }
-        $flags = $out;
         if ($node === false) {
             $modelInfo = [
                 'name' => $name,
@@ -252,48 +232,107 @@ class Installer extends Controller
         } else {
             $modelInfo = $node;
         }
+
+        // Check for installer flags, currently reequired for alll models.
+        $installTypes = ['installDB', 'installPermissions', 'installConfigs', 'installResources', 'installPreferences'];
+        if (method_exists($docroot->className, 'installFlags')) {
+            $modelFlags = call_user_func_array([$docroot->className, 'installFlags'], []);
+        } else {
+            foreach ($installTypes as $type) {
+                $modelFlags[$type] = false;
+            }
+        }
+
+        // Determine the modules that can and should be installed.
+        // This is the safeguard for when a model doesn't have an installer you are requiring
+        foreach ($installTypes as $type) {
+            if (!isset($flags[$type])) {
+                $finalFlags[$type] = $modelFlags[$type];
+                continue;
+            }
+            if ($flags[$type] == false) {
+                $finalFlags[$type] = $flags[$type];
+                continue;
+            }
+            if ($modelFlags[$type] == false) {
+                Debug::warn("$type cannot be installed due to installFlags on the model.");
+                $finalFlags[$type] = $modelFlags[$type];
+                continue;
+            }
+            $finalFlags[$type] = $flags[$type];
+            continue;
+        }
+        $flags = $finalFlags;
+
         if ($this->getModelVersion($name) === $modelInfo['currentVersion'] && $modelInfo['installStatus'] === 'installed') {
-            Issue::notice("$name has already been successfully installed");
-            return false;
+            self::$errors = array_merge(self::$errors, ['errorInfo' => "$name has already been successfully installed"]);
+            return true;
         }
         foreach ($installTypes as $Type) {
-            if (!empty($flags[$Type]) && $flags[$Type] === true) {
-                if (!empty($modelInfo[$Type]) && $modelInfo[$Type] == 'success') {
-                    Debug::warn("$Type has already been successfully installed");
-                    continue;
-                }
-                if (method_exists($docroot->className, $Type)) {
-                    if (call_user_func_array([$docroot->className, $Type], [])) {
-                        $modelInfo[$Type] = 'success';
+            if ($flags[$Type] === false) {
+                if (empty($modelInfo[$Type])) {
+                    if ($modelFlags[$Type] === true) {
+                        $modelInfo[$Type] = 'not installed';
                     } else {
-                        $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
-                        $modelInfo[$Type] = 'error';
-                        $modelInfo['installStatus'] = 'partially installed';
+                        $modelInfo[$Type] = 'skipped';
                     }
-                } else {
-                    $errors[] = ['errorInfo' => "$name $Type method not found."];
-                    $modelInfo[$Type] = 'not found';
-                    $modelInfo['installStatus'] = 'partially installed';
                 }
+                continue;
             }
-            if (!isset($modelInfo[$Type])) {
-                $modelInfo[$Type] = 'skipped';
+            if (!empty($modelInfo[$Type]) && $modelInfo[$Type] == 'success') {
+                Debug::warn("$Type has already been successfully installed");
+                continue;
             }
+            if (!method_exists($docroot->className, $Type)) {
+                $errors[] = ['errorInfo' => "$name $Type method not found."];
+                $modelInfo[$Type] = 'not found';
+                continue;
+            }
+            if (!call_user_func_array([$docroot->className, $Type], [])) {
+                $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                $modelInfo[$Type] = 'error';
+                continue;
+            }
+            $modelInfo[$Type] = 'success';
+            continue;
         }
         $modelInfo['currentVersion'] = $this->getModelVersion($name);
-        if ($modelInfo['installStatus'] !== 'partially installed') {
+        $this->setNode($name, $modelInfo, true);
+        $this->updateInstallStatus($name);
+
+        if ($errors !== null) {
+            $errors[] = ['errorInfo' => "$name did not install properly."];
+            self::$errors = array_merge(self::$errors, $errors);
+            return false;
+        }
+        self::$errors = array_merge(self::$errors, ['errorInfo' => "$name has been installed."]);
+        return true;
+    }
+    private function updateInstallStatus($name)
+    {
+        $node = $this->getNode($name);
+        if ($node === false) {
+            $modelInfo = [
+                'name' => $name,
+                'installDate' => time(),
+                'lastUpdate' => time(),
+                'installStatus' => 'not installed',
+                'currentVersion' => $this->getModelVersion($name)
+            ];
+        } else {
+            $modelInfo = $node;
+        }
+
+        $installTypes = ['installDB', 'installPermissions', 'installConfigs', 'installResources', 'installPreferences'];
+        foreach ($installTypes as $type) {
+            if (!in_array($modelInfo[$type], ['success', 'skipped'])) {
+                $modelInfo['installStatus'] = 'partially installed';
+                Debug::error($type);
+                break;
+            }
             $modelInfo['installStatus'] = 'installed';
         }
         $this->setNode($name, $modelInfo, true);
-
-        if ($errors !== null) {
-            self::$errors = array_merge(self::$errors, $errors);
-            Issue::notice("$name did not install properly.");
-            return false;
-        }
-
-        Issue::success("$name has been installed.");
-        return true;
     }
 
     /**
@@ -384,8 +423,6 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
      *
      * @return boolean - Returns true if the htaccess file was found or
      *                   created, false otherwise.
-     *
-     * @todo  - Core should not "Issue" anything, it should return it as an object
      */
     public function checkHtaccess($create = false)
     {
@@ -405,7 +442,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
             }
             if ($check === 2) {
                 if ($create) {
-                    Issue::notice('Previous htaccess file did not need to be edited.');
+                    $errors[] = ['errorInfo' => "Previous htaccess file did not need to be edited."];
                 }
                 return true;
             }
@@ -433,7 +470,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
                 Cookie::delete('installHash');
                 return false;
             }
-            Session::set('installHash', Cookie::get('installHash'));
+            Session::put('installHash', Cookie::get('installHash'));
         }
         if (Session::get('installHash') !== self::$installJson['installHash']) {
             Session::delete('installHash');
@@ -442,7 +479,7 @@ RewriteRule ^(.+)$ index.php?url=$1 [QSA,L]";
         return true;
     }
 
-    public function nextStep($page, $redirect = true)
+    public function nextStep($page, $redirect = false)
     {
         $newHash = Code::genInstall();
         $this->setNode('installHash', $newHash, true);
