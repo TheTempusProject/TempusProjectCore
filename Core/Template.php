@@ -533,7 +533,7 @@ class Template extends Controller
 
         if (strpos($template, '{OPTION=') !== false) {
             foreach (self::$options as $key => $value) {
-                $template = preg_replace($key, $value, $template);
+                $template = preg_replace($key, $value, $template, 1);
             }
             $template = preg_replace('#\{OPTION\=(.*?)\}#is', '', $template);
         }

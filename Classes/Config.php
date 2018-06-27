@@ -201,6 +201,12 @@ class Config
             Debug::error("No such parent: $parent");
             return false;
         }
+        if ($value === 'true') {
+            $value = true;
+        }
+        if ($value === 'false') {
+            $value = false;
+        }
         if (isset(self::$config[$parent][$name])) {
             self::$config[$parent][$name] = $value;
         } else {
