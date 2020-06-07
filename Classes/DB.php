@@ -461,7 +461,7 @@ class DB
         $this->newQuery();
         $this->tableBuff = $name;
         if ($addID === true) {
-            $this->addfield('ID', 'int', 11);
+            $this->addfield('ID', 'int', 11, false);
         }
 
         return true;
