@@ -7,30 +7,19 @@
  * project. Used to hold and keep track of many of the variables
  * that support the applications execution.
  *
- * @version 1.0
- *
+ * @version 2.1
  * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
 
 namespace TempusProjectCore\Core;
 
 use TempusProjectCore\Classes\CustomException;
-use TempusProjectCore\Classes\Pagination;
 use TempusProjectCore\Functions\Routes;
-use TempusProjectCore\Classes\Session;
-use TempusProjectCore\Classes\Cookie;
 use TempusProjectCore\Classes\Config;
-use TempusProjectCore\Classes\Check;
 use TempusProjectCore\Classes\Debug;
-use TempusProjectCore\Classes\Token;
-use TempusProjectCore\Classes\Input;
-use TempusProjectCore\Classes\Email;
 use TempusProjectCore\Classes\Issue;
-use TempusProjectCore\Classes\Hash;
 use TempusProjectCore\Classes\Log;
 use TempusProjectCore\Classes\DB;
 
@@ -60,13 +49,8 @@ class Controller
     /////////////////////////
     // Main User Variables //
     /////////////////////////
-    protected static $activeGroup = null;
+    protected static $activePerms = null;
     protected static $activePrefs = null;
-    protected static $isLoggedIn = false;
-    protected static $activeUser = null;
-    protected static $isMember = false;
-    protected static $isAdmin = false;
-    protected static $isMod = false;
 
     /**
      * This is the constructor, we use this to populate some of our system

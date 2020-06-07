@@ -4,12 +4,12 @@
 
 TempusProjectCore is the core functionality used by [The Tempus Project](https://github.com/TheTempusProject/TheTempusProject) a rapid prototyping framework. This Library can be utilized outside of the TempusProject, but the functionality has not been tested well as a stand alone library.
 
-This library utilizes the MVC architecture in addition to a custom templating engine designed to make building web applications simple. 
+This library utilizes the MVC architecture in addition to a custom templating engine designed to make building web applications fast and simple. 
 
 **Notice: This Library is provided as is, please use at your own risk.**
 
 ## Installation and Use
-The easiest way to use TPC in your own application is to install and initialize it via composer.
+The easiest way to use TPC in your application is to install and initialize it via composer.
 
 ```
 "require": {

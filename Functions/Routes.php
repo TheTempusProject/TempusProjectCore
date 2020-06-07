@@ -4,15 +4,11 @@
  *
  * This class is used to easily return file and document location information.
  *
- * @version 1.0
- *
+ * @version 2.1
  * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
 namespace TempusProjectCore\Functions;
 
 use TempusProjectCore\Classes\Input;
