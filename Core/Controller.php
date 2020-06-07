@@ -1,6 +1,6 @@
 <?php
 /**
- * Core/Controller.php
+ * core/controller.php
  *
  * The controller handles our main template and provides the
  * model and view functions which are the backbone of the tempus
@@ -12,7 +12,6 @@
  * @link    https://TheTempusProject.com/Core
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
 namespace TempusProjectCore\Core;
 
 use TempusProjectCore\Classes\CustomException;
