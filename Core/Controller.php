@@ -22,7 +22,7 @@ use TempusProjectCore\Classes\Issue;
 use TempusProjectCore\Classes\Log;
 use TempusProjectCore\Classes\DB;
 
-class Controller
+class Controller extends TPCore
 {
     /////////////////////////
     // Meta-data Variables //
@@ -88,56 +88,5 @@ class Controller
         self::$template->set('ERROR', Issue::getError());
         self::$template->set('INFO', Issue::getInfo());
         self::$template->render();
-    }
-
-    /**
-     * Function for initiating a new model.
-     *
-     * @param  wild     $data  - Any data the model may need when instantiated.
-     * @param  string   $modelName - The name of the model you are calling.
-     *                           ('.', and '_' are valid delimiters and the 'model_'
-     *                           in the file name is not required)
-     *
-     * @return object          - The model object.
-     */
-    protected function model($modelName)
-    {
-        Debug::group("Model: $modelName", 1);
-        $docLocation = Routes::getLocation('models', $modelName);
-        if ($docLocation->error) {
-            new CustomException('model', $docLocation->errorString);
-        } else {
-            Debug::log("Requiring model");
-            require_once $docLocation->fullPath;
-            Debug::log("Instantiating model");
-            $model = new $docLocation->className;
-        }
-        Debug::gend();
-        if (isset($model)) {
-            return $model;
-        }
-    }
-
-    /**
-     * This function adds a standard view to the main {CONTENT}
-     * section of the page.
-     *
-     * @param  string   $viewName - The name of the view being called.
-     * @param  wild     $data - Any data to be used with the view.
-     *
-     * @todo  add a check to this and an exception
-     */
-    protected function view($viewName, $data = null)
-    {
-        if (!empty($data)) {
-            $out = self::$template->standardView($viewName, $data);
-        } else {
-            $out = self::$template->standardView($viewName);
-        }
-        if (!empty($out)) {
-            self::$content .= $out;
-        } else {
-            new CustomException('view', $viewName);
-        }
     }
 }
