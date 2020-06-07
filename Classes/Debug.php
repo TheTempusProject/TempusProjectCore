@@ -20,11 +20,7 @@ namespace TempusProjectCore\Classes;
 
 use TempusProjectCore\Functions\Routes;
 use TempusProjectCore\Core\Installer;
-
-require_once Routes::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
-
 use TempusDebugger\TempusDebugger;
-
 class Debug
 {
     /**
@@ -46,8 +42,8 @@ class Debug
     private static $redirect = false;
     private static $errorTrace = false;
     private static $group = 0;
-    private static $tempusDebugger = null;
-    private static $debugLog = null;
+    private static $tempusDebugger;
+    private static $debugLog;
 
     /**
      * Acts as a constructor.
@@ -55,6 +51,8 @@ class Debug
     private static function startDebug()
     {
         if (self::$console) {
+            require_once Routes::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
+            
             ob_start();
             self::$tempusDebugger = TempusDebugger::getInstance(true);
             self::$tempusDebugger->setOption('includeLineNumbers', self::$showLines);

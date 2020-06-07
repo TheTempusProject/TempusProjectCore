@@ -67,7 +67,7 @@ class Controller extends TPCore
         self::$sessionPrefix = Config::get('session/sessionPrefix');
         self::$db = DB::getInstance();
         self::$template = new Template();
-        self::$activeGroup = json_decode(file_get_contents(Routes::getLocation('permissionsDefault')->fullPath), true);
+        self::$activePerms = json_decode(file_get_contents(Routes::getLocation('permissionsDefault')->fullPath), true);
         self::$activePrefs = json_decode(file_get_contents(Routes::getLocation('preferencesDefault')->fullPath));
         Debug::gend();
     }
