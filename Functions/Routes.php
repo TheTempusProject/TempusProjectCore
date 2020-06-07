@@ -27,15 +27,19 @@ class Routes
         switch ($type) {
             case 'models':
                 $locationData['root'] = self::getFull();
+                $locationData['file'] = $file . '.php';
                 if ($folder != null) {
                     $locationData['folder'] = $folder . '/';
                 } else {
-                    $locationData['folder'] = 'App/Models/';
+                    $locationData['folder'] = 'plugins/' . $file . '/models/';
                 }
-                $locationData['file'] = $file . '.php';
+                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                if (!file_exists($locationData['fullPath'])) {
+                    $locationData['folder'] = 'models/';
+                    $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
+                }
                 $file = ucfirst($file);
                 $locationData['className'] = APP_SPACE . '\Models\\' . $file;
-                $locationData['fullPath'] = $locationData['root'] . $locationData['folder'] . $locationData['file'];
                 $locationData['errorString'] = 'Model could not be found: ' . $locationData['fullPath'];
                 break;
 
