@@ -77,6 +77,7 @@ class CustomException extends Exception
                 if (Debug::status()) {
                     Issue::error('Missing View: ' . $data);
                 }
+                Redirect::to(404);
                 break;
 
             case 'defaultMethod':
