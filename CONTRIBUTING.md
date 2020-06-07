@@ -14,10 +14,9 @@ Contributing to TempusProjectCore is completely voluntary and should follow all 
 ## Naming Conventions
 - File names are to be lower case
 - All class names must be upper case
-- Any data being stored as a file must be saved in the app directory
-- Controllers must have a constructor and destructor incorporating the constructor and destructor in the Resources Controller
-- (This will be an interface requirement soon)
-- Views must be named using underscores for separation and must be prefixed with view_
+- Any data being stored as a file must be saved in the app directory (with the exception of config which should be stored unde config/)
+- Controllers must have a constructor and destructor using the constructor and destructor methods found in resources/
+- Views must be named using lowerCamelCase
 
 ## Dependencies
 Whenever a dependency is updated or added, pull requests must include a section that answers the following questions.
@@ -36,12 +35,9 @@ New classes must be prefaced with a doc-block following this style:
  *
  * This is the admin controller.
  *
- * @version 1.0
- *
+ * @version 2.0
  * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
  * @link    https://TheTempusProject.com
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
 ```
