@@ -18,6 +18,7 @@ class Model
     public static $configName = "xxxxxx";
     public static $permissions = "xxxxxx";
     public static $preferences = "xxxxxx";
+    public static $enabled = false;
     
     /**
      * The model constructor.
@@ -125,6 +126,16 @@ class Model
     public static function installPermissions()
     {
         return true;
+    }
+    
+    /**
+     * Checks if the model and database are both enabled.
+     *
+     * @return bool - if the model is enabled or not
+     */
+    private static function enabled()
+    {
+        return self::$enabled;
     }
 
     /**

@@ -12,7 +12,7 @@
  */
 namespace TempusProjectCore\Core;
 
-class DatabaseModel
+class DatabaseModel extends Model
 {
     /**
      * Returns an array of models required to run this model without error.
@@ -112,6 +112,26 @@ class DatabaseModel
             Debug::info('One or more invalid ID\'s.');
             return false;
         }
+        return true;
+    }
+    
+    /**
+     * Function to clear entries of a defined type.
+     *
+     * @param  string $data - The log type to be cleared
+     *
+     * @return bool
+     *
+     * @todo  this is probably dumb
+     */
+    public function empty()
+    {
+        if (!isset(self::$log)) {
+            self::$log = $this->model('log');
+        }
+        self::$db->delete(self::$tableName, ['ID', '>=', '0']);
+        self::$log->admin("Cleared " . self::$tableName);
+        Debug::info(self::$tableName . " Cleared");
         return true;
     }
 
