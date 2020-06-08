@@ -24,6 +24,15 @@ use TempusProjectCore\Classes\DB;
 
 class TPCore
 {
+    /////////////////////////
+    // Main User Variables //
+    /////////////////////////
+    protected static $isLoggedIn = false;
+    protected static $activeUser = null;
+    protected static $isMember = false;
+    protected static $isAdmin = false;
+    protected static $isMod = false;
+
     /**
      * This is used to determine the method to be called in the controller class.
      *
