@@ -1,0 +1,42 @@
+{
+    "main":
+    {
+        "name": "The Tempus Project",
+        "logo": "Images/logo.png",
+        "template": "default",
+        "timezone": "America\/New_York",
+        "tokenName": "TPC_SESSION_TOKEN",
+        "loginLimit": 3,
+        "pageLimit": 5,
+        "pageDefault": 5
+    },
+    "uploads":
+    {
+        "enabled": true,
+        "files": false,
+        "images": true,
+        "avatarOnly": false,
+        "maxFileSize": 5000000,
+        "maxImageSize": 500000
+    },
+    "database":
+    {
+        "dbHost": "",
+        "dbPrefix": "",
+        "dbUsername": "",
+        "dbPassword": "",
+        "dbName": "",
+        "dbType": "mysql",
+        "dbEnabled": false,
+        "dbMaxQuery": 5
+    },
+    "cookie":
+    {
+        "cookiePrefix": "TPC_",
+        "cookieExpiry": 604800
+    },
+    "session":
+    {
+        "sessionPrefix": "TPC_"
+    }
+}
