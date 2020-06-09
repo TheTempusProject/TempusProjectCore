@@ -1,0 +1,7 @@
+{
+    "uploadImages": false,
+    "pageLimit": 10,
+    "adminAccess": false,
+    "modAccess": false,
+    "memberAccess": false
+}
