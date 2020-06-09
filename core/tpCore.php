@@ -33,6 +33,33 @@ class TPCore
     protected static $isAdmin = false;
     protected static $isMod = false;
 
+    /////////////////////////
+    // Meta-data Variables //
+    /////////////////////////
+    protected static $pageDescription = null;
+    protected static $title = null;
+
+    ///////////////////////////
+    // Main Config Variables //
+    ///////////////////////////
+    protected static $sessionPrefix = null;
+    protected static $cookiePrefix = null;
+    public static $location = null;
+    public static $base = null;
+
+    ////////////////////////
+    // Common Use Objects //
+    ////////////////////////
+    protected static $template = null;
+    protected static $content = null;
+    protected static $db = null;
+
+    /////////////////////////
+    // Main User Variables //
+    /////////////////////////
+    protected static $activePerms = null;
+    protected static $activePrefs = null;
+
     /**
      * This is the constructor, we use this to populate some of our system
      * variables needed for the application like; initiating the DB, loading
