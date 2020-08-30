@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Config
 {
@@ -52,11 +52,11 @@ class Config
      */
     public static function getConfig()
     {
-        $docLocation = Docroot::getLocation('appConfig');
+        $docLocation = Routes::getLocation('appConfig');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('appConfigDefault');
+            $docLocation = Routes::getLocation('appConfigDefault');
             if ($docLocation->error) {
-                $docLocation = Docroot::getLocation('configDefault');
+                $docLocation = Routes::getLocation('configDefault');
             }
         }
         return json_decode(file_get_contents($docLocation->fullPath), true);
@@ -135,12 +135,11 @@ class Config
             self::load();
         }
         if ($default) {
-            if (file_put_contents(Docroot::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
-                return true;
+            if (!file_put_contents(Routes::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
+                return false;
             }
-            return false;
         }
-        if (file_put_contents(Docroot::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
+        if (file_put_contents(Routes::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
             return true;
         }
         return false;
@@ -165,6 +164,21 @@ class Config
         self::$config[$name] = [];
         return true;
     }
+    public static function removeConfigCategory($name, $save = false)
+    {
+        if (self::$config === false) {
+            self::load();
+        }
+        if (!isset(self::$config[$name])) {
+            Issue::error("Config does not have ceategory: $name");
+            return false;
+        }
+        unset(self::$config[$name]);
+        if ($save) {
+            self::saveConfig(true);
+        }
+        return true;
+    }
 
     /**
      * Add a new config option for the specified category.
@@ -186,6 +200,12 @@ class Config
         if (!isset(self::$config[$parent])) {
             Debug::error("No such parent: $parent");
             return false;
+        }
+        if ($value === 'true') {
+            $value = true;
+        }
+        if ($value === 'false') {
+            $value = false;
         }
         if (isset(self::$config[$parent][$name])) {
             self::$config[$parent][$name] = $value;
@@ -240,7 +260,7 @@ class Config
      */
     public static function generateConfig($mods = [])
     {
-        $docLocation = Docroot::getLocation('appConfig');
+        $docLocation = Routes::getLocation('appConfig');
         if (!$docLocation->error) {
             if (!self::$override) {
                 Debug::error('config file already exists');
@@ -249,9 +269,9 @@ class Config
             }
         }
 
-        $docLocation = Docroot::getLocation('appConfigDefault');
+        $docLocation = Routes::getLocation('appConfigDefault');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('configDefault');
+            $docLocation = Routes::getLocation('configDefault');
         }
 
         self::$config = json_decode(file_get_contents($docLocation->fullPath), true);
@@ -260,9 +280,11 @@ class Config
                 self::updateConfig($mod['category'], $mod['name'], $mod['value'], true);
             }
         }
-        self::saveConfig(true);
-        Debug::info('config file generated successfully.');
+        if (self::saveConfig(true)) {
+            Debug::info('config file generated successfully.');
+            return true;
+        }
 
-        return true;
+        return false;
     }
 }

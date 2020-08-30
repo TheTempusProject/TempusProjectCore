@@ -18,12 +18,9 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot;
-
-require_once Docroot::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
-
+use TempusProjectCore\Functions\Routes;
+use TempusProjectCore\Core\Installer;
 use TempusDebugger\TempusDebugger;
-
 class Debug
 {
     /**
@@ -42,11 +39,11 @@ class Debug
      */
     private static $console = true;
     private static $showLines = false;
-    private static $redirect = false;
-    private static $errorTrace = false;
+    private static $redirect = true;
+    private static $errorTrace = true;
     private static $group = 0;
-    private static $tempusDebugger = null;
-    private static $debugLog = null;
+    private static $tempusDebugger;
+    private static $debugLog;
 
     /**
      * Acts as a constructor.
@@ -54,9 +51,16 @@ class Debug
     private static function startDebug()
     {
         if (self::$console) {
+            require_once Routes::getFull() . 'vendor/TheTempusProject/TempusDebugger/TempusDebugger.php';
+            
             ob_start();
             self::$tempusDebugger = TempusDebugger::getInstance(true);
             self::$tempusDebugger->setOption('includeLineNumbers', self::$showLines);
+            $installer = new Installer;
+            self::$tempusDebugger->setHash('d73ed7591a30f0ca7d686a0e780f0d05');
+            if ($installer->getNode('installHash') !== false) {
+                self::$tempusDebugger->setHash($installer->getNode('installHash'));
+            }
         }
     }
 

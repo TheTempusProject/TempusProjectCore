@@ -23,13 +23,13 @@ namespace TempusProjectCore\Core;
 use TempusProjectCore\Classes\Debug;
 use TempusProjectCore\Classes\Issue;
 use TempusProjectCore\Classes\Token;
-use TempusProjectCore\Functions\Docroot;
+use TempusProjectCore\Functions\Routes;
 use TempusProjectCore\Classes\Config;
 use TempusProjectCore\Classes\CustomException;
 use TempusProjectCore\Classes\Pagination;
 use \DateTime;
 
-class Template extends Controller
+class Template extends TPCore
 {
     private static $pageLimit = null;
     private static $page = null;
@@ -54,7 +54,7 @@ class Template extends Controller
         self::set('TITLE', 'The Tempus Project');
         self::set('PAGE_DESCRIPTION', '');
         self::set('TOKEN', Token::generate());
-        self::set('BASE', Docroot::getAddress());
+        self::set('BASE', Routes::getAddress());
         self::setRobot();
         Debug::gend();
     }
@@ -73,10 +73,10 @@ class Template extends Controller
     public static function setTemplate($name)
     {
         Debug::log("Setting template: $name");
-        $docLocation = Docroot::getLocation('template', $name);
+        $docLocation = Routes::getLocation('template', $name);
         if ($docLocation->error) {
             new CustomException('template', $docLocation->errorString);
-            $docLocation = Docroot::getLocation('template', Config::get('main/template'));
+            $docLocation = Routes::getLocation('template', Config::get('main/template'));
         }
         self::$templateLocation = $docLocation->fullPath;
         $load = self::loadTemplate($name);
@@ -101,7 +101,7 @@ class Template extends Controller
     {
         Debug::group('Template Loader', 1);
         $loaderName = strtolower(str_replace('.', '_', $name));
-        $docLocation = Docroot::getLocation('templateLoader', $loaderName);
+        $docLocation = Routes::getLocation('templateLoader', $loaderName);
         if ($docLocation->error) {
             new CustomException('templateLoader', $docLocation->errorString);
         } else {
@@ -185,7 +185,7 @@ class Template extends Controller
     public static function standardView($view, $data = null)
     {
         $viewName = ucfirst(str_replace('.', '/', $view));
-        $path = Docroot::getFull() . 'Views/' . $viewName . '.php';
+        $path = Routes::getLocation('views', $viewName)->fullPath;
         if (is_file($path)) {
             Debug::log("Calling Standard View: $viewName");
             if (!empty($data)) {
@@ -230,7 +230,7 @@ class Template extends Controller
         if ($selectString == null) {
             $selectString = CORE_CONTROLLER . '/' . CORE_METHOD;
         }
-        $regURL = Docroot::getAddress() . $selectString;
+        $regURL = Routes::getAddress() . $selectString;
         $regPage = "#\<li(.*)\>\<a(.*)href=\"$regURL\"(.*)\>(.*)\<\/li>#i";
         $regActive = "<li$1 class=\"active\"><a$2href=\"$regURL\"$3>$4</li>";
         if ($view == null) {
@@ -242,7 +242,7 @@ class Template extends Controller
         if (!preg_match($regPage, $view)) {
             //if you cannot find the item requested, it will default to the base of the item provided
             $newURL = explode('/', $selectString);
-            $regURL = Docroot::getAddress() . $newURL[0];
+            $regURL = Routes::getAddress() . $newURL[0];
             $regPage = "#\<li(.*)\>\<a(.*)href=\"$regURL\"(.*)\>(.*)\<\/li>#i";
         }
         if (isset($content)) {
@@ -533,7 +533,7 @@ class Template extends Controller
 
         if (strpos($template, '{OPTION=') !== false) {
             foreach (self::$options as $key => $value) {
-                $template = preg_replace($key, $value, $template);
+                $template = preg_replace($key, $value, $template, 1);
             }
             $template = preg_replace('#\{OPTION\=(.*?)\}#is', '', $template);
         }
@@ -543,6 +543,9 @@ class Template extends Controller
         $template = preg_replace_callback(
             $dtc,
             function ($data) {
+                if ($data[2] == '' || $data[2] == 'null') {
+                    return '';
+                }
                 if (stripos($data[1], 'date')) {
                     $dateFormat = self::$activePrefs->dateFormat;
                 } elseif (stripos($data[1], 'time')) {

@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Check
 {
@@ -26,7 +26,7 @@ class Check
     private static $errorLogUser = [];
 
     /**
-     * Creates a new DB connection, but only if we need it.
+     * Creates a new DB instance, but only if we need it.
      */
     public static function connect()
     {
@@ -121,7 +121,7 @@ class Check
     public static function form($name)
     {
         if (empty(self::$formValidator)) {
-            $docLocation = Docroot::getLocation('formChecks');
+            $docLocation = Routes::getLocation('formChecks');
             if ($docLocation->error) {
                 self::addError($docLocation->errorString);
 
@@ -174,7 +174,6 @@ class Check
 
             return false;
         }
-
         return true;
     }
 
@@ -213,6 +212,23 @@ class Check
             return true;
         }
         self::addError('Invalid alpha-numeric.', $data);
+
+        return false;
+    }
+
+    /**
+     * Checks for alpha-numeric type.
+     *
+     * @param  string $data - The data being checked.
+     *
+     * @return boolean
+     */
+    public static function uploads()
+    {
+        if (ini_get('file_uploads') == 1) {
+            return true;
+        }
+        self::addError('Uploads are disabled.');
 
         return false;
     }
@@ -278,7 +294,7 @@ class Check
      *
      * @return  bool
      */
-    public static function path($data)
+    public static function path($data = null)
     {
         if (!preg_match('#^[^/?*:;\\{}]+$#mi', $data)) {
             return true;

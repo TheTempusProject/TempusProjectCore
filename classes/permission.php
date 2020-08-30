@@ -15,7 +15,7 @@
 
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Docroot as Docroot;
+use TempusProjectCore\Functions\Routes as Routes;
 
 class Permission
 {
@@ -30,11 +30,11 @@ class Permission
 
     public static function getPerms()
     {
-        $docLocation = Docroot::getLocation('appPermissions');
+        $docLocation = Routes::getLocation('appPermissions');
         if ($docLocation->error) {
-            $docLocation = Docroot::getLocation('appPermissionsDefault');
+            $docLocation = Routes::getLocation('appPermissionsDefault');
             if ($docLocation->error) {
-                $docLocation = Docroot::getLocation('permissionsDefault');
+                $docLocation = Routes::getLocation('permissionsDefault');
             }
         }
         return json_decode(file_get_contents($docLocation->fullPath), true);
@@ -59,12 +59,12 @@ class Permission
             self::load();
         }
         if ($default) {
-            if (file_put_contents(Docroot::getLocation('appPermissionsDefault')->fullPath, json_encode(self::$permissions))) {
+            if (file_put_contents(Routes::getLocation('appPermissionsDefault')->fullPath, json_encode(self::$permissions))) {
                 return true;
             }
             return false;
         }
-        if (file_put_contents(Docroot::getLocation('appPermissions')->fullPath, json_encode(self::$permissions))) {
+        if (file_put_contents(Routes::getLocation('appPermissions')->fullPath, json_encode(self::$permissions))) {
             return true;
         }
         return false;
@@ -80,6 +80,34 @@ class Permission
             return false;
         }
         self::$permissions[$name] = $value;
+        return true;
+    }
+
+    public static function addPerms($data)
+    {
+        if (!is_array()) {
+            Debug::error("Permissions must be an array.");
+            return false;
+        }
+        foreach ($data as $key => $value) {
+            $final = self::addPerm($key, $value);
+        }
+        return $final;
+    }
+    
+    public static function removePerm($name, $save = false)
+    {
+        if (self::$permissions === false) {
+            self::load();
+        }
+        if (!isset(self::$permissions[$name])) {
+            Debug::error("Permission does not exist: $name");
+            return false;
+        }
+        unset(self::$permissions[$name]);
+        if ($save === true) {
+            self::savePerms(true);
+        }
         return true;
     }
 }

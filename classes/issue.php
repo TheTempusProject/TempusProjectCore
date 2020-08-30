@@ -129,8 +129,11 @@ class Issue
         if (is_array($list)) {
             $out .= "<ul>";
             foreach ($list as $key) {
-                Debug::error($key);
-                $out .= "<li>" . $key['errorInfo'] . "</li>";
+                if (!empty($key['errorInfo'])) {
+                    $out .= "<li>" . $key['errorInfo'] . "</li>";
+                } else {
+                    $out .= "<li>" . $key . "</li>";
+                }
             }
             $out .= "</ul>";
         }
