@@ -1,22 +1,18 @@
 <?php
 /**
- * Classes/Email.php
+ * classes/email.php
  *
  * This is our class for constructing and sending various kinds of emails.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Core\Template as Template;
-use TempusProjectCore\Functions\Routes as Routes;
+use TempusProjectCore\Core\Template;
+use TempusProjectCore\Functions\Routes;
 
 class Email
 {
@@ -153,11 +149,11 @@ class Email
         if (self::$useTemplate) {
             $data = new \stdClass();
             if (self::$unsub) {
-                $data->UNSUB = Template::standardView('email.unsubscribe');
+                $data->UNSUB = Views::standardView('email.unsubscribe');
             } else {
                 $data->UNSUB = '';
             }
-            $data->LOGO = Config::get('main/logo');
+            // $data->LOGO = Config::get('main/logo');
             $data->SITENAME = Config::get('main/name');
             $data->EMAIL = $email;
             if (!is_array($params)) {
@@ -167,11 +163,11 @@ class Email
                     $data->$key = $value;
                 }
             }
-            $data->MAIL_FOOT = Template::standardView('email.foot');
+            $data->MAIL_FOOT = Views::standardView('email.foot');
             $data->MAIL_TITLE = self::$title;
             $data->MAIL_BODY = Template::parse(self::$message, $data);
             $subject = Template::parse(self::$subject, $data);
-            $body = Template::standardView('email.template', $data);
+            $body = Views::standardView('email.template', $data);
         } else {
             $subject = self::$subject;
             $body = '<h1>' . self::$title . '</h1>' . self::$message;

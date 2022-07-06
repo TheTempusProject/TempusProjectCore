@@ -16,13 +16,13 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "thetempusproject/tempusdebugger": "1.1"
+        "thetempusproject/tempusdebugger": "3.0"
     },
     "autoload": {
         "classmap": [
-            "Classes",
-            "Core",
-            "Functions"
+            "classes",
+            "core",
+            "functions"
         ]
     }
 }

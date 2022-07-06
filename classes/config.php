@@ -1,145 +1,136 @@
 <?php
 /**
- * Classes/Config.php
+ * classes/config.php
  *
- * This class handles all the hard-coded configuration.
+ * This class handles all the hard-coded configurations.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
 namespace TempusProjectCore\Classes;
 
-use TempusProjectCore\Functions\Routes as Routes;
+use TempusProjectCore\Functions\{
+    Debug, Check, Routes
+};
 
 class Config
 {
-    private static $override = false;
-    private static $config = false;
-    private static $configNew = null;
-    private static $configLocation = null;
-    private static $configLocationDefault = null;
+    public static $config = false;
+    private $location = false;
+    private $initialized = false;
 
     /**
-     * Loads default location and default values as well as setting
-     * the config to be used by the application.
+     * Default constructor which will attempt to load the config from the location specified.
      *
-     * NOTE: This function will reload the config array from the
-     * config.json every time it is used.
+     * @param {string} [$location]
+     * @return {null|object}
+     */ 
+    public function __construct($location) {
+        $this->initialized = $this->load($location);
+        if ($this->initialized !== false) {
+            return $this;
+        }
+    }
+
+    /**
+     * Attempts to retrieve then set the configuration from a file.
+     * @note This function will reset the config every time it is used.
      *
-     * @return boolean - true
+     * @param {string} $location
+     * @return {bool}
      */
-    private static function load()
-    {
-        self::$config = self::getConfig();
+    public function load($location) {
+        $contents = $this->getConfig($location);
+        if ($contents === false) {
+            return false;
+        }
+        self::$config = $contents;
+        $this->location = $location;
         return true;
     }
 
     /**
-     * Returns the config array as its currently saved.
+     * Opens and decodes the config json from the location provided.
      *
-     * Order or retrieval:
-     *  - App/config.json
-     *  - App/config_default.json
-     *  - Config::$configNew
-     *
-     * @return array - The config array.
+     * @param {string} [$location]
+     * @return {bool|array}
      */
-    public static function getConfig()
-    {
-        $docLocation = Routes::getLocation('appConfig');
-        if ($docLocation->error) {
-            $docLocation = Routes::getLocation('appConfigDefault');
-            if ($docLocation->error) {
-                $docLocation = Routes::getLocation('configDefault');
-            }
+    public function getConfig($location) {
+        if (file_exists($location)) {
+            return json_decode(file_get_contents($location), true);
+        } else {
+            Debug::warn("Config json not found: $location");
+            return false;
         }
-        return json_decode(file_get_contents($docLocation->fullPath), true);
     }
 
     /**
      * Retrieves the config option for $name.
      *
-     * @param string $data - Must be in <category>/<option> format.
-     *
-     * @return WILD - Depending on the requested option, various returns
-     *                are possible; returns null if the option is not found.
-     *
-     * @example Config::get('main/name') - Should return the name you have set in App/Core/config.php
+     * @param {string} [$name] - Must be in <category>/<option> format.
+     * @return {WILD}
      */
-    public static function get($name)
-    {
+    public static function get($name) {
         $data = explode('/', $name);
         if (count($data) != 2) {
             Debug::warn("Config not properly formatted: $name");
-            
             return;
         }
         if (self::$config === false) {
-            self::load();
-        }
-        if (isset(self::$config[$data[0]][$data[1]])) {
-            return self::$config[$data[0]][$data[1]];
-        }
-        Debug::warn("Config not found: $name");
-
-        return;
-    }
-    /**
-     * Retrieves the config option for $name.
-     *
-     * @param string $data - Must be in <category>/<option> format.
-     *
-     * @return WILD - Depending on the requested option, various returns
-     *                are possible; returns null if the option is not found.
-     *
-     * @example Config::get('main/name') - Should return the name you have set in App/Core/config.php
-     */
-    public static function getString($name)
-    {
-        $data = explode('/', $name);
-        if (count($data) != 2) {
-            Debug::warn("Config not properly formatted: $name");
-            
+            Debug::warn("Config not loaded.");
             return;
         }
-        if (self::$config === false) {
-            self::load();
+        $category = $data[0];
+        $node = $data[1];
+        if (!isset(self::$config[$category][$node])) {
+            Debug::warn("Config not found: $name");
+            return;
         }
-        if (isset(self::$config[$data[0]][$data[1]])) {
-            if (is_bool(self::$config[$data[0]][$data[1]])) {
-                return (self::$config[$data[0]][$data[1]] ? 'true' : 'false');
-            } else {
-                return self::$config[$data[0]][$data[1]];
-            }
-        }
-        Debug::warn("Config not found: $name");
-
-        return;
+        return self::$config[$category][$node];
     }
 
     /**
-     * Saves the current $config array.
+     * Retrieves the config option for $name and if the result is bool, converts it to a string.
      *
-     * @param  boolean $default - Option flag to save default_config
-     *                            as well.
+     * @param {string} [$name] - Must be in <category>/<option> format.
+     * @return {WILD}
      */
-    public static function saveConfig($default = false)
-    {
+    public static function getString($name) {
+        $result = $this->get($name);
+        if (is_bool($result)) {
+            $result = ($result ? 'true' : 'false');
+        }
+        return $result;
+    }
+
+    /**
+     * Saves the current config.
+     *
+     * @param {bool} [$default] - Whether or not to save a default copy.
+     * @return {bool}
+     */
+    public function save($default = false) {
         if (self::$config === false) {
-            self::load();
+            Debug::warn("Config not loaded.");
+            return false;
+        }
+        if ($this->location === false) {
+            Debug::warn("Config location not set.");
+            return false;
         }
         if ($default) {
-            if (!file_put_contents(Routes::getLocation('appConfigDefault')->fullPath, json_encode(self::$config))) {
+            $locationArray = explode('.', $this->location);
+            $last = array_pop($locationArray);
+            $locationArray[] = 'default';
+            $locationArray[] = $last;
+            $defaultLocation = implode('.', $locationArray);
+            if (!file_put_contents($defaultLocation, json_encode(self::$config))) {
                 return false;
             }
         }
-        if (file_put_contents(Routes::getLocation('appConfig')->fullPath, json_encode(self::$config))) {
+        if (file_put_contents($this->location, json_encode(self::$config))) {
             return true;
         }
         return false;
@@ -148,34 +139,45 @@ class Config
     /**
      * Adds a new category to the $config array.
      *
-     * @param string $name - The name of the new category.
-     *
-     * @todo  - check name.
+     * @param {string} [$categoryName]
+     * @return {bool}
      */
-    public static function addConfigCategory($name)
-    {
+    public function addCategory($categoryName) {
         if (self::$config === false) {
-            self::load();
-        }
-        if (isset(self::$config[$name])) {
-            Issue::error("Category already exists: $name");
+            Debug::warn("Config not loaded.");
             return false;
         }
-        self::$config[$name] = [];
+        if (!Check::simpleName($categoryName)) {
+            Debug::warn("Category name invalid: $categoryName");
+            return false;
+        }
+        if (isset(self::$config[$categoryName])) {
+            Debug::warn("Category already exists: $categoryName");
+            return false;
+        }
+        self::$config[$categoryName] = [];
         return true;
     }
-    public static function removeConfigCategory($name, $save = false)
-    {
+
+    /**
+     * Removes an existing category from the $config array.
+     *
+     * @param {string} [$categoryName]
+     * @param {string} [$save]
+     * @return {bool}
+     */
+    public function removeCategory($categoryName, $save = false, $saveDefault = true) {
         if (self::$config === false) {
-            self::load();
+            Debug::warn("Config not loaded.");
+            return;
         }
-        if (!isset(self::$config[$name])) {
-            Issue::error("Config does not have ceategory: $name");
+        if (!isset(self::$config[$categoryName])) {
+            Debug::warn("Config does not have ceategory: $categoryName");
             return false;
         }
-        unset(self::$config[$name]);
+        unset(self::$config[$categoryName]);
         if ($save) {
-            self::saveConfig(true);
+            $this->save($saveDefault);
         }
         return true;
     }
@@ -186,19 +188,32 @@ class Config
      * NOTE: Use a default option when using this function to
      * aid in failsafe execution.
      *
-     * @param string $parent - The primary category to add the option to.
-     * @param string $name   - The name of the new option.
-     * @param wild   $value  - The desired value for the new option.
-     *
-     * @return boolean
+     * @param {string} [$category] - The primary category to add the option to.
+     * @param {string} [$node] - The name of the new option.
+     * @param {wild} [$value] - The desired value for the new option.
+     * @param {bool} [$createMissing] - Whether or not to create missing options.
+     * @param {bool} [$save] - Whether or not to save the config.
+     * @param {bool} [$saveDefault] - Whether or not to save the default config.
+     * @return {bool}
      */
-    public static function updateConfig($parent, $name, $value, $create = false, $save = false)
-    {
+    public function update($category, $node, $value, $createMissing = false, $save = false, $saveDefault = false) {
         if (self::$config === false) {
-            self::load();
+            Debug::warn("Config not loaded.");
+            return false;
         }
-        if (!isset(self::$config[$parent])) {
-            Debug::error("No such parent: $parent");
+        if (!Check::simpleName($category)) {
+            Debug::warn("Category name invalid: $categoryName");
+            return false;
+        }
+        if (!isset(self::$config[$category])) {
+            if (!$createMissing) {
+                Debug::warn("No such category: $category");
+                return false;
+            }
+            $this->addCategory($category);
+        }
+        if (!Check::simpleName($node)) {
+            Debug::warn("Node name invalid: $categoryName");
             return false;
         }
         if ($value === 'true') {
@@ -207,48 +222,50 @@ class Config
         if ($value === 'false') {
             $value = false;
         }
-        if (isset(self::$config[$parent][$name])) {
-            self::$config[$parent][$name] = $value;
-        } else {
-            if ($create) {
-                self::addConfig($parent, $name, $value);
-            } else {
-                Debug::error("Config not found.");
+        if (!isset(self::$config[$category][$node])) {
+            if (!$createMissing) {
+                Debug::warn("Config not found.");
                 return false;
             }
+            $this->add($category, $node, $value);
+        } else {
+            self::$config[$category][$node] = $value;
         }
         if ($save) {
-            self::saveConfig();
+            $this->saveConfig($saveDefault);
         }
         return true;
     }
 
     /**
-     * Add a new config option for the specified category.
+     * Add a new config node for the specified category.
      *
-     * NOTE: Use a default option when using this function to
-     * aid in failsafe execution.
-     *
-     * @param string $parent - The primary category to add the option to.
-     * @param string $name   - The name of the new option.
-     * @param wild   $value  - The desired value for the new option.
-     *
-     * @return boolean
+     * @param {string} [$category] - The primary category to add the option to.
+     * @param {string} [$node] - The name of the new option.
+     * @param {wild} [$value] - The desired value for the new option.
+     * @return {bool}
      */
-    public static function addConfig($parent, $name, $value)
-    {
+    public function add($category, $node, $value) {
         if (self::$config === false) {
-            self::load();
+            self::$config = array();
         }
-        if (!isset(self::$config[$parent])) {
-            Issue::error("No such parent: $parent");
+        if (!Check::simpleName($category)) {
+            Debug::warn("Category name invalid: $category");
             return false;
         }
-        if (isset(self::$config[$parent][$name])) {
-            Issue::error("Category already exists: $name");
+        if (!isset(self::$config[$category])) {
+            Debug::warn("No such category: $category");
             return false;
         }
-        self::$config[$parent][$name] = $value;
+        if (!Check::simpleName($node)) {
+            Debug::warn("Category Node name invalid: $node");
+            return false;
+        }
+        if (isset(self::$config[$category][$node])) {
+            Debug::warn("Config already exists: $node");
+            return false;
+        }
+        self::$config[$category][$node] = $value;
         return true;
     }
 
@@ -258,33 +275,17 @@ class Config
      *
      * @return boolean
      */
-    public static function generateConfig($mods = [])
-    {
-        $docLocation = Routes::getLocation('appConfig');
-        if (!$docLocation->error) {
-            if (!self::$override) {
-                Debug::error('config file already exists');
-
-                return false;
-            }
-        }
-
-        $docLocation = Routes::getLocation('appConfigDefault');
-        if ($docLocation->error) {
-            $docLocation = Routes::getLocation('configDefault');
-        }
-
-        self::$config = json_decode(file_get_contents($docLocation->fullPath), true);
+    public function generate($location, $mods = []) {
+        $this->location = $location;
         if (!empty($mods)) {
             foreach ($mods as $mod) {
-                self::updateConfig($mod['category'], $mod['name'], $mod['value'], true);
+                $this->update($mod['category'], $mod['name'], $mod['value'], true);
             }
         }
-        if (self::saveConfig(true)) {
+        if ($this->save(true)) {
             Debug::info('config file generated successfully.');
             return true;
         }
-
         return false;
     }
 }

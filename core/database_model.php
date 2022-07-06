@@ -1,69 +1,35 @@
 <?php
 /**
- * core/databaseModel.php
+ * core/database_model.php
  *
- * The database model provides some very basic functionality for 
- * database calls that get used in a very similar way across the board.
+ * The class provides some basic functionality for models that interact
+ * with the database.
  *
- * @version 2.1
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-namespace TempusProjectCore\Core;
+namespace TempusProjectCore;
+
+use TempusProjectCore\Functions\Debug;
+use TempusProjectCore\Classes\Database;
+use TempusProjectCore\Functions\Check;
 
 class DatabaseModel extends Model
 {
-    /**
-     * Returns an array of models required to run this model without error.
-     *
-     * @return array - An array of models
-     */
-    public static function requiredModels()
-    {
-        $required = [
-            'log'
-        ];
-        return $required;
-    }
-    
-    /**
-     * Tells the installer which types of integrations your model needs to install.
-     *
-     * @return array - Install flags
-     */
-    public static function installFlags()
-    {
-        $flags = [
-            'installDB' => true,
-            'installPermissions' => false,
-            'installConfigs' => false,
-            'installResources' => false,
-            'installPreferences' => false
-        ];
-        return $flags;
-    }
+    public static $tableName = '';
+    public static $db = '';
 
-    /**
-     * Filters the given data. Usually used to all additional lookup or 
-     * fields to the data before its passed back as output.
-     *
-     * @param  array|object $data - The input to be filtered.
-     *
-     * @return object - The filtered output.
-     */
-    public function filter($data)
-    {
-        return $data;
+    public function __construct() {
+        self::$db = Database::getInstance();
     }
 
     /**
      * Retrieves a comment by its ID and parses it.
      *
-     * @param  integer $id - The ID of the comment you are
-     *                       trying to retrieve.
-     *
-     * @return object - The parsed comment db entry.
+     * @param  {int} [$id]
+     * @return {object} - The parsed comment db entry.
      */
     public function findById($id)
     {
@@ -85,14 +51,10 @@ class DatabaseModel extends Model
      * Function to delete the specified entry.
      *
      * @param  int|array $ID the log ID or array of ID's to be deleted
-     *
      * @return bool
      */
     public function delete($data)
     {
-        if (!isset(self::$log)) {
-            self::$log = $this->model('log');
-        }
         foreach ($data as $instance) {
             if (!is_array($data)) {
                 $instance = $data;
@@ -102,7 +64,6 @@ class DatabaseModel extends Model
                 $error = true;
             }
             self::$db->delete(self::$tableName, ['ID', '=', $instance]);
-            self::$log->admin("Deleted " . self::$tableName . ": $instance");
             Debug::info(self::$tableName . " deleted: $instance");
             if (!empty($end)) {
                 break;
@@ -118,19 +79,13 @@ class DatabaseModel extends Model
     /**
      * Function to clear entries of a defined type.
      *
-     * @param  string $data - The log type to be cleared
-     *
-     * @return bool
-     *
      * @todo  this is probably dumb
+     * @param  string $data - The log type to be cleared
+     * @return bool
      */
     public function empty()
     {
-        if (!isset(self::$log)) {
-            self::$log = $this->model('log');
-        }
         self::$db->delete(self::$tableName, ['ID', '>=', '0']);
-        self::$log->admin("Cleared " . self::$tableName);
         Debug::info(self::$tableName . " Cleared");
         return true;
     }
@@ -139,7 +94,6 @@ class DatabaseModel extends Model
      * retrieves a list of paginated (limited) results.
      *
      * @param  array $filter - A filter to be applied to the list.
-     *
      * @return bool|object - Depending on success.
      */
     public function listPaginated($filter = null)

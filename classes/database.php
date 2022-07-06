@@ -1,23 +1,24 @@
 <?php
 /**
- * Classes/DB.php
+ * classes/database.php
  *
- * The DB class defines all our interactions with the database. This particular
- * db interface uses PDO so it can have a wide variety of flexibility, currently
- * it is setup specifically with mysql.
+ * Defines all interactions with the database.
+ * 
+ * @todo - Add more than just mysql
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
 namespace TempusProjectCore\Classes;
 
-class DB
+use \PDO;
+use \PDOException;
+use TempusProjectCore\Functions\Debug;
+use TempusProjectCore\Template\Pagination;
+
+class Database
 {
     public static $instance = null;
     private $pdo = null;
@@ -31,17 +32,65 @@ class DB
     private $errorMessage = null;
     
     /**
+     * Checks the DB connection with the provided information.
+     *
+     * @param string $host - Database Host.
+     * @param string $db   - Database Name.
+     * @param string $user - Database Username.
+     * @param string $pass - Database Password.
+     *
+     * @return bool
+     */
+    public static function check( $host = null, $db = null, $user = null, $pass = null )
+    {
+        if (empty($host) || empty($db) || empty($user) || empty($pass)) {
+            Debug::error("check::db: one or more parameters are missing.");
+            
+            return false;
+        }
+        try {
+            Debug::log('Attempting to connect to DB with supplied credentials.');
+            $test = new PDO('mysql:host='.$host.';dbname='.$db, $user, $pass);
+        } catch (PDOException $Exception) {
+            Debug::error("Cannot connect to DB with provided credentials: ". $Exception->getMessage());
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks the current database in the configuration file for version verification.
+     *
+     * @return boolean
+     *
+     * @todo  - Update this function to be more effective.
+     */
+    public static function mysql()
+    {
+        self::connect();
+        $dbVersion = self::$db->version();
+        preg_match('@[0-9]+\.[0-9]+\.[0-9]+@', $dbVersion, $version);
+        if (version_compare($version[0], '10.0.0', '>')) {
+            return true;
+        }
+        self::addError("Mysql Version is too low! Current version is $version[0]. Version 10.0.0 or higher is required.");
+        
+        return false;
+    }
+    /**
      * Automatically open the DB connection with settings from our global config.
      */
     private function __construct($host = null, $name = null, $user = null, $pass = null)
     {
-        Debug::log('Class Initiated: '.get_class($this));
+        Debug::log('Class initialized: '.get_class($this));
         $this->error = false;
         if (isset($host) && isset($name) && isset($user) && isset($pass)) {
             try {
                 Debug::log('Attempting to connect to DB with supplied credentials.');
-                $this->pdo = new \PDO('mysql:host='.$host.';dbname='.$name, $user, $pass);
-            } catch (\PDOException $Exception) {
+                $this->pdo = new PDO('mysql:host='.$host.';dbname='.$name, $user, $pass);
+            } catch (PDOException $Exception) {
                 $this->error = true;
                 $this->errorMessage = $Exception->getMessage();
             }
@@ -53,8 +102,8 @@ class DB
         if ($this->error === false) {
             try {
                 Debug::log('Attempting to connect to DB with config credentials.');
-                $this->pdo = new \PDO('mysql:host='.Config::get('database/dbHost').';dbname='.Config::get('database/dbName'), Config::get('database/dbUsername'), Config::get('database/dbPassword'));
-            } catch (\PDOException $Exception) {
+                $this->pdo = new PDO('mysql:host='.Config::get('database/dbHost').';dbname='.Config::get('database/dbName'), Config::get('database/dbUsername'), Config::get('database/dbPassword'));
+            } catch (PDOException $Exception) {
                 $this->error = true;
                 $this->errorMessage = $Exception->getMessage();
             }
@@ -65,7 +114,7 @@ class DB
         }
         $this->maxQuery = Config::get('database/dbMaxQuery');
         // @TODO add a toggle for this
-        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         Debug::log('DB connection successful');
         return;
     }
@@ -117,7 +166,7 @@ class DB
         if ($this->query = $this->pdo->prepare($sql)) {
             try {
                 $this->query->execute();
-            } catch (\PDOException $Exception) {
+            } catch (PDOException $Exception) {
                 $this->error = true;
                 $this->errorMessage = $Exception->getMessage();
                 Debug::error('DB Version Error');
@@ -201,7 +250,7 @@ class DB
         $this->query = $this->pdo->prepare($data);
         try {
             $this->query->execute();
-        } catch (\PDOException $Exception) {
+        } catch (PDOException $Exception) {
             $this->error = true;
             $this->errorMessage = $Exception->getMessage();
             Debug::warn('DB Raw Query Error');
@@ -243,7 +292,7 @@ class DB
         }
         try {
             $this->query->execute();
-        } catch (\PDOException $Exception) {
+        } catch (PDOException $Exception) {
             $this->error = true;
             $this->errorMessage = $Exception->getMessage();
             Debug::error('DB Query Error');
@@ -254,7 +303,7 @@ class DB
             $this->results = null;
             $this->count = 1;
         } else {
-            $this->results = $this->query->fetchAll(\PDO::FETCH_OBJ);
+            $this->results = $this->query->fetchAll(PDO::FETCH_OBJ);
             $this->count = $this->query->rowCount();
         }
 

@@ -1,39 +1,34 @@
 <?php
 /**
- * Classes/Check.php
+ * functions/check.php
  *
  * This class is used to test various inputs.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
+namespace TempusProjectCore\Functions;
 
-namespace TempusProjectCore\Classes;
-
-use TempusProjectCore\Functions\Routes as Routes;
+use TempusProjectCore\Functions\Routes;
 
 class Check
 {
-    private static $db = null;
     private static $formValidator = null;
     private static $errorLog = [];
     private static $errorLogFull = [];
     private static $errorLogUser = [];
 
     /**
-     * Creates a new DB instance, but only if we need it.
+     * This function only logs an error for the user-error-log.
+     * Primarily used for providing generalized form feedback
+     *
+     * @param string $error - The error information to be added to the list.
      */
-    public static function connect()
+    public static function addUserError($error)
     {
-        if (!empty(self::$db)) {
-            return;
-        }
-        self::$db = DB::getInstance();
+        self::$errorLogUser[] = ['errorInfo' => $error];
     }
 
     /**
@@ -65,28 +60,6 @@ class Check
     }
 
     /**
-     * This function only logs an error for the user-error-log.
-     * Primarily used for providing generalized form feedback
-     *
-     * @param string $error - The error information to be added to the list.
-     */
-    public static function addUserError($error)
-    {
-        self::$errorLogUser[] = ['errorInfo' => $error];
-    }
-
-    /**
-     * Function for reseting the current error logs and adding the old log
-     * to the complete error log.
-     */
-    public static function errorReset()
-    {
-        self::$errorLog = [];
-        self::$errorLogUser = [];
-        self::$errorLogFull = array_merge(self::$errorLogFull, self::$errorLog);
-    }
-
-    /**
      * Function for returning the system error array.
      *
      * @param  $full - Flag for returning the full error log.
@@ -112,26 +85,14 @@ class Check
     }
 
     /**
-     * Checks a form as defined in App/form.php.
-     *
-     * @param  $name - The name of the method to be used for checking the form.
-     *
-     * @return boolean
+     * Function for reseting the current error logs and adding the old log
+     * to the complete error log.
      */
-    public static function form($name)
+    public static function errorReset()
     {
-        if (empty(self::$formValidator)) {
-            $docLocation = Routes::getLocation('formChecks');
-            if ($docLocation->error) {
-                self::addError($docLocation->errorString);
-
-                return false;
-            }
-            require_once $docLocation->fullPath;
-            self::$formValidator = new $docLocation->className;
-        }
-        self::errorReset();
-        return self::$formValidator->$name();
+        self::$errorLogFull = array_merge(self::$errorLogFull, self::$errorLog);
+        self::$errorLog = [];
+        self::$errorLogUser = [];
     }
 
     /**
@@ -145,33 +106,23 @@ class Check
     {
         if (!Config::get('uploads/enabled') || !Config::get('uploads/images')) {
             self::addError('Image uploads are disabled.');
-
             return false;
         }
-
         if (!isset($_FILES[$imageName])) {
             self::addError('File not found.', $imageName);
-
             return false;
         }
-
         if ($_FILES[$imageName]['error'] != 0) {
             self::addError('File error:' . $_FILES[$imageName]['error']);
-
             return false;
         }
-
         if ($_FILES[$imageName]['size'] > Config::get('uploads/maxImageSize')) {
             self::addError("Image is too large.");
-
             return false;
         }
-
-        $whitelist = [".jpg",".jpeg",".gif",".png"];
         $fileType = strrchr($_FILES[$imageName]['name'], '.');
-        if (!(in_array($fileType, $whitelist))) {
+        if (!(in_array($fileType, ALLOWED_IMAGE_UPLOAD_EXTENTIONS))) {
             self::addError("Invalid image type", $fileType);
-
             return false;
         }
         return true;
@@ -181,21 +132,17 @@ class Check
      * Checks a string for a boolean string value.
      *
      * @param  string $data - The data being checked.
-     *
      * @return boolean
      */
     public static function tf($data)
     {
-        if ($data == 'true') {
+        if ($data === true || strtolower($data) === 'true') {
             return true;
         }
-
-        if ($data == 'false') {
+        if ($data === false || strtolower($data) === 'false') {
             return true;
         }
-
         self::addError('Invalid true-false: ', $data);
-
         return false;
     }
 
@@ -203,7 +150,6 @@ class Check
      * Checks for alpha-numeric type.
      *
      * @param  string $data - The data being checked.
-     *
      * @return boolean
      */
     public static function alnum($data)
@@ -216,29 +162,11 @@ class Check
         return false;
     }
 
-    /**
-     * Checks for alpha-numeric type.
-     *
-     * @param  string $data - The data being checked.
-     *
-     * @return boolean
-     */
-    public static function uploads()
-    {
-        if (ini_get('file_uploads') == 1) {
-            return true;
-        }
-        self::addError('Uploads are disabled.');
-
-        return false;
-    }
-
 
     /**
      * Checks an input for spaces.
      *
      * @param  string $data - The data being checked.
-     *
      * @return boolean
      */
     public static function nospace($data)
@@ -255,7 +183,6 @@ class Check
      * Checks the data to see if it is a digit.
      *
      * @param   mixed     $data   - Data being checked.
-     *
      * @return  bool
      */
     public static function id($data)
@@ -273,15 +200,14 @@ class Check
      * only contain letters, numbers, space, underscore, and dashes.
      *
      * @param   mixed     $data   - Data being checked.
-     *
      * @return  bool
      */
     public static function dataTitle($data)
     {
-        if (preg_match('#^[a-z 0-9\-\_ ]+$#mi', $data)) {
+        if (preg_match(DATA_TITLE_PREG, $data)) {
             return true;
         }
-        self::addError('Invalid data string.', $data);
+        self::addError('Invalid data title.', $data);
 
         return false;
     }
@@ -291,54 +217,33 @@ class Check
      * in the filename.
      *
      * @param   string     $data   - Data being checked.
-     *
      * @return  bool
      */
     public static function path($data = null)
     {
-        if (!preg_match('#^[^/?*:;\\{}]+$#mi', $data)) {
+        if (!preg_match( PATH_PREG_REQS, $data)) {
             return true;
         }
         self::addError('Invalid path.', $data);
-
         return false;
     }
 
     /**
      * Checks the form token.
      *
-     * @param   string|null     $data   - String to check for the token. (Post Token assumed)
-     *
-     * @return  bool
+     * @param string|null - String to check for the token. (Post Token assumed)
+     * @return bool
      */
     public static function token($data = null)
     {
         if (empty($data)) {
             $data = Input::post('token');
         }
-
-        return Token::check($data);
-    }
-
-    /**
-     * Checks the DB for an email after verifying $data is a valid email.
-     *
-     * @param   string      $email   - The email being tested.
-     *
-     * @return  bool
-     */
-    public static function noEmailExists($email)
-    {
-        self::connect();
-        if (self::email($email)) {
-            $emailQuery = self::$db->get('users', ['email', '=', $email]);
-            if ($emailQuery->count() == 0) {
-                return true;
-            }
+        $result = Token::check($data);
+        if ($result === false) {
+            self::addError("Invalid Token.", $data);
         }
-        self::addError("Email is already in use.\n", $email);
-
-        return false;
+        return $result;
     }
 
     /**
@@ -353,7 +258,6 @@ class Check
         $url = filter_var($data, FILTER_SANITIZE_URL);
         if (filter_var($url, FILTER_VALIDATE_URL) === false) {
             self::addError('Invalid Url');
-
             return false;
         }
         return true;
@@ -374,10 +278,8 @@ class Check
         $sanitizedEmail = filter_var($data, FILTER_SANITIZE_EMAIL);
         if (!filter_var($sanitizedEmail, FILTER_VALIDATE_EMAIL)) {
             self::addError("Email is not properly formatted.");
-
             return false;
         }
-
         return true;
     }
 
@@ -398,73 +300,17 @@ class Check
     public static function password($data, $data2 = null)
     {
         if (strlen($data) < 6) {
-            self::addError("Password is not properly formatted.");
+            self::addError("Password is too short.");
             return false;
         }
         if (strlen($data) > 20) {
-            self::addError("Password is not properly formatted.");
+            self::addError("Password is too long.");
             return false;
         }
         if (isset($data2) && $data !== $data2) {
             self::addError("Passwords do not match.");
             return false;
         }
-
-        return true;
-    }
-
-    /**
-     * Checks the DB for a username after verifying $data is a valid username.
-     *
-     * @param string $data - The string being tested
-     *
-     * @return bool
-     *
-     * @todo  - this cannot rely on the user model
-     */
-    public static function usernameExists($data)
-    {
-        self::connect();
-        if (self::username($data)) {
-            $usernameResults = self::$db->get('users', ['username', '=', $data]);
-            if ($usernameResults->count()) {
-                return true;
-            }
-        }
-        self::addError("No user exists in the DB.", $data);
-
-        return false;
-    }
-
-    /**
-     * Checks username formatting.
-     *
-     * Requirements:
-     * - 4 - 16 characters long
-     * - must only contain numbers and letters: [A - Z] , [a - z], [0 - 9]
-     *
-     * @param string $data - The string being tested.
-     *
-     * @return boolean
-     */
-    public static function username($data)
-    {
-        if (strlen($data) > 16) {
-            self::addError("Username must be be 4 to 16 numbers or letters.", $data);
-
-            return false;
-        }
-        if (strlen($data) < 4) {
-            self::addError("Username must be be 4 to 16 numbers or letters.", $data);
-
-            return false;
-        }
-        if (!ctype_alnum($data)) {
-            self::addError("Username must be be 4 to 16 numbers or letters.", $data);
-
-            return false;
-        }
-
         return true;
     }
 
@@ -483,40 +329,48 @@ class Check
     {
         if (strlen($data) > 20) {
             self::addError("Name is too long.", $data);
-
             return false;
         }
         if (strlen($data) < 2) {
             self::addError("Name is too short.", $data);
-
             return false;
         }
         if (!ctype_alpha(str_replace(' ', '', $data))) {
             self::addError("Name is not properly formatted.", $data);
-
             return false;
         }
         return true;
     }
 
     /**
+     * Checks for alpha-numeric type.
+     *
+     * @param  string $data - The data being checked.
+     *
+     * @return bool
+     */
+    public static function uploads()
+    {
+        if (ini_get('file_uploads') == 1) {
+            return true;
+        }
+        self::addError('Uploads are disabled.');
+        return false;
+    }
+
+    /**
      * Checks the PHP version.
      *
-     * Requirements:
-     * - version 5.6 or higher
-     *
-     * @return boolean
-     *
+     * @return bool
      * @todo  - use version compare here.
      */
     public static function php()
     {
         $phpVersion = phpversion();
-        if ($phpVersion >= 5.6) {
+        if ($phpVersion >= MINIMUM_PHP_VERSION) {
             return true;
         }
         self::addError("PHP version is too old.", $phpVersion);
-
         return false;
     }
 
@@ -531,7 +385,6 @@ class Check
             return true;
         }
         self::addError("PHP Mail function is not enabled.");
-
         return false;
     }
 
@@ -546,21 +399,37 @@ class Check
             return true;
         }
         self::addError("PHP Safe Mode is enabled.");
-
         return false;
+    }
+
+    /**
+     * Checks if PHP's Safe mode is enabled.
+     *
+     * @return bool
+     */
+    public static function phpExtensions()
+    {
+        if (!extension_loaded('pdo')) {
+            self::addError("PHP PDO is not enabled.");
+            return false;
+        }
+        if (!extension_loaded('pdo_mysql')) {
+            self::addError("PHP PDO_mysql is not enabled.");
+            return false;
+        }
+        return true;
     }
 
     /**
      * Checks to make sure sessions are working properly.
      *
      * @return bool
-     *
-     * @todo  - add unset.
      */
     public static function sessions()
     {
         $_SESSION['sessionTest'] = 1;
         if (!empty($_SESSION['sessionTest'])) {
+            unset( $_SESSION['sessionTest'] );
             return true;
         }
         self::addError("There is an error with saving sessions.");
@@ -569,30 +438,9 @@ class Check
     }
 
     /**
-     * Checks the current database in the configuration file for version verification.
-     *
-     * @return boolean
-     *
-     * @todo  - Update this function to be more effective.
-     */
-    public static function mysql()
-    {
-        self::connect();
-        $dbVersion = self::$db->version();
-        preg_match('@[0-9]+\.[0-9]+\.[0-9]+@', $dbVersion, $version);
-        if (version_compare($version[0], '10.0.0', '>')) {
-            return true;
-        }
-        self::addError("Mysql Version is too low! Current version is $version[0]. Version 10.0.0 or higher is required.");
-        
-        return false;
-    }
-
-    /**
      * Checks to see if cookies are enabled.
      *
      * @return boolean
-     *
      * @todo  - Come back to this, if for no other reason than to
      *          unset the cookie and use the application cookie name.
      */
@@ -608,31 +456,45 @@ class Check
     }
 
     /**
-     * Checks the DB connection with the provided information.
+     * Checks to see if $data contains only numbers, letters, underscores, and dashes
      *
-     * @param string $host - Database Host.
-     * @param string $db   - Database Name.
-     * @param string $user - Database Username.
-     * @param string $pass - Database Password.
-     *
-     * @return bool
+     * @return boolean
      */
-    public static function db($host = null, $db = null, $user = null, $pass = null)
+    public static function simpleName( $data )
     {
-        if (empty($host) || empty($db) || empty($user) || empty($pass)) {
-            self::addError("check::db: one or more parameters are missing.");
-            
-            return false;
+        if (preg_match(SIMPLE_NAME_PREG, $data)) {
+            return true;
         }
-        try {
-            Debug::log('Attempting to connect to DB with supplied credentials.');
-            $test = new \PDO('mysql:host='.$host.';dbname='.$db, $user, $pass);
-        } catch (\PDOException $Exception) {
-            self::addError("Cannot connect to DB with provided credentials.", $Exception->getMessage());
+        self::addError('Invalid simple name.', $data);
 
-            return false;
+        return false;
+    }
+
+    /**
+     * Checks to see if $data contains only numbers, letters, underscores, and dashes
+     *
+     * @return boolean
+     */
+    public static function isApache() {
+        if (isset($_SERVER["SERVER_SOFTWARE"])) {
+            if (false !== stripos($_SERVER["SERVER_SOFTWARE"],'apache')) {
+                return true;
+            }
         }
+        return false;
+    }
 
-        return true;
+    /**
+     * Checks to see if $data contains only numbers, letters, underscores, and dashes
+     *
+     * @return boolean
+     */
+    public static function isNginx() {
+        if (isset($_SERVER["SERVER_SOFTWARE"])) {
+            if (false !== stripos($_SERVER["SERVER_SOFTWARE"],'nginx')) {
+                return true;
+            }
+        }
+        return false;
     }
 }

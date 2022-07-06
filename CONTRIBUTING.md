@@ -35,9 +35,9 @@ New classes must be prefaced with a doc-block following this style:
  *
  * This is the admin controller.
  *
- * @version 2.0
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- * @link    https://TheTempusProject.com
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
+ * @link    https://TheTempusProject.com/Core
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
 ```

@@ -1,19 +1,15 @@
 <?php
 /**
- * Classes/Cookie.php
+ * functions/cookie.php
  *
- * This class is used for manipulation of cookies used by the application.
+ * This class is used for manipulation of cookies.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
-namespace TempusProjectCore\Classes;
+namespace TempusProjectCore\Functions;
 
 class Cookie
 {
@@ -21,7 +17,6 @@ class Cookie
      * Checks whether $data is a valid saved cookie or not.
      *
      * @param string $data - Name of the cookie to check for.
-     *
      * @return boolean
      */
     public static function exists($data)
@@ -29,7 +24,7 @@ class Cookie
         if (!Check::dataTitle($data)) {
             return false;
         }
-        $cookieName = Config::get('cookie/cookiePrefix') . $data;
+        $cookieName = DEFAULT_COOKIE_PREFIX . $data;
         if (isset($_COOKIE[$cookieName])) {
             Debug::log("Cookie found: $data");
 
@@ -44,7 +39,6 @@ class Cookie
      * Returns a specific cookie if it exists.
      *
      * @param string $data - Cookie to retrieve data from.
-     *
      * @return bool|string - String from the requested cookie, or false if the cookie does not exist.
      */
     public static function get($data)
@@ -53,7 +47,7 @@ class Cookie
             return false;
         }
         if (self::exists($data)) {
-            $cookieName = Config::get('cookie/cookiePrefix') . $data;
+            $cookieName = DEFAULT_COOKIE_PREFIX . $data;
             return $_COOKIE[$cookieName];
         }
 
@@ -68,7 +62,6 @@ class Cookie
      * @param int    $expiry - How long (in seconds) until the cookie
      *                       should expire. Config default used if
      *                       none specified.
-     *
      * @return bool returns true or false based on completion
      */
     public static function put($name, $value, $expire = null)
@@ -77,12 +70,12 @@ class Cookie
             return false;
         }
         if (!$expire) {
-            $expire = time() + Config::get('cookie/cookieExpiry');
+            $expire = time() + DEFAULT_COOKIE_EXPIRATION;
         }
         if (!Check::ID($expire)) {
             return false;
         }
-        $cookieName = Config::get('cookie/cookiePrefix') . $name;
+        $cookieName = DEFAULT_COOKIE_PREFIX . $name;
         setcookie($cookieName, $value, $expire, '/');
         Debug::log("Cookie Created: $name till $expire");
 
@@ -99,7 +92,7 @@ class Cookie
         if (!Check::dataTitle($data)) {
             return false;
         }
-        $cookieName = Config::get('cookie/cookiePrefix') . $data;
+        $cookieName = DEFAULT_COOKIE_PREFIX . $data;
         setcookie($cookieName, '', (time() - 1), '/');
         Debug::log("Cookie deleted: $data");
 

@@ -8,42 +8,66 @@
  * that support the applications execution.
  *
  * @version 3.0
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-namespace TempusProjectCore\Core;
+namespace TempusProjectCore;
 
-use TempusProjectCore\Classes\Debug;
-use TempusProjectCore\Classes\Issue;
+use TempusProjectCore\Functions\Debug;
+use TempusProjectCore\Template\Issues;
+use TempusProjectCore\Template\Components;
+use TempusProjectCore\Template\Filters;
 
-class Controller extends TPCore
+class Controller
 {
-    /**
-     * This is the constructor, we use this to populate some of our system
-     * variables needed for the application like; initiating the DB, loading
-     * the Template class, and storing any Issues from previous sessions
-     */
+    protected static $title = null;
+    protected static $content = null;
+    protected static $template = null;
+    protected static $pageDescription = null;
+
     public function __construct()
     {
         Debug::log('Controller Constructing: ' . get_class($this));
+        self::$template = new Template;
+        Issues::checkSessions();
     }
 
-    /**
-     * This is the build function. Here we set the final template variables
-     * before we render the entire page to the end user.
-     */
-    protected function build()
-    {
-        Debug::info("Controller: Build Call");
-        self::$template->addFilter('ui', '#{UI}(.*?){/UI}#is', (Issue::getUI() ? '$1' : ''), true);
-        self::$template->set('CONTENT', self::$content);
-        self::$template->set('TITLE', self::$title);
-        self::$template->set('PAGE_DESCRIPTION', self::$pageDescription);
-        self::$template->set('NOTICE', Issue::getNotice());
-        self::$template->set('SUCCESS', Issue::getSuccess());
-        self::$template->set('ERROR', Issue::getError());
-        self::$template->set('INFO', Issue::getInfo());
-        self::$template->render();
+    public function __destruct() {
+        Debug::log('Controller Destructing: ' . get_class($this));
+        Filters::add('issues', '#{ISSUES}(.*?){/ISSUES}#is', (Issues::hasIssues() ? '$1' : ''), true);
+        $test = implode('<br>', Issues::getNoticeMessages());
+        if (!empty($test)) {
+            $test = '<div class="alert alert-warning" role="alert">' . $test . '</div>';
+        }
+        Components::set(
+            'NOTICE',
+            $test,
+        );
+        $test = implode('<br>', Issues::getSuccessMessages());
+        if (!empty($test)) {
+            $test = '<div class="alert alert-success" role="alert">' . $test . '</div>';
+        }
+        Components::set(
+            'SUCCESS',
+            $test,
+        );
+        $test = implode('<br>', Issues::getErrorMessages());
+        if (!empty($test)) {
+            $test = '<div class="alert alert-danger" role="alert">' . $test . '</div>';
+        }
+        Components::set(
+            'ERROR',
+            $test,
+        );
+        $test = implode('<br>', Issues::getInfoMessages());
+        if (!empty($test)) {
+            $test = '<div class="alert alert-info" role="alert">' . $test . '</div>';
+        }
+        Components::set(
+            'INFO',
+            $test,
+        );
+        Template::render();
     }
 }

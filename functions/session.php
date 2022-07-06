@@ -1,21 +1,19 @@
 <?php
 /**
- * Classes/Session.php
+ * functions/session.php
  *
- * This class is used for the modification and management of the session data.
+ * This class is used for management of session data.
  *
- * @todo  check all these inputs
+ * @todo  check all the inputs
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
+namespace TempusProjectCore\Functions;
 
-namespace TempusProjectCore\Classes;
+use TempusProjectCore\Classes\Config;
 
 class Session
 {
@@ -23,12 +21,11 @@ class Session
      * Checks if a session named '$name' exists.
      *
      * @param string $name - The name of the session being checked for.
-     *
      * @return boolean
      */
     public static function exists($name)
     {
-        $sessionName = Config::get('session/sessionPrefix') . $name;
+        $sessionName = DEFAULT_SESSION_PREFIX . $name;
         if (isset($_SESSION[$sessionName])) {
             return true;
         }
@@ -41,13 +38,12 @@ class Session
      * Retrieves the value of a session named '$data' if it exists
      *
      * @param string $data - The name of the session variable you are trying to retrieve.
-     *
      * @return string|bool - Returns the data from the session or false if nothing is found..
      */
     public static function get($data)
     {
         if (self::exists($data)) {
-            $sessionName = Config::get('session/sessionPrefix') . $data;
+            $sessionName = DEFAULT_SESSION_PREFIX . $data;
             //Debug::error("Session::get - $sessionName => " . $_SESSION[$sessionName]);
             return $_SESSION[$sessionName];
         }
@@ -60,12 +56,11 @@ class Session
      *
      * @param string $name - Session name.
      * @param string $data - Session data.
-     *
      * @return boolean     - Returns the session creation for $name and $data.
      */
     public static function put($name, $data)
     {
-        $sessionName = Config::get('session/sessionPrefix') . $name;
+        $sessionName = DEFAULT_SESSION_PREFIX . $name;
         $_SESSION[$sessionName] = $data;
         //Debug::warn("Session: Created: $sessionName");
         //Debug::error($_SESSION[$sessionName]);
@@ -77,13 +72,12 @@ class Session
      * Deletes the specified session.
      *
      * @param string $data - The name of the session to be destroyed.
-     *
      * @return boolean
      */
     public static function delete($data)
     {
         if (self::exists($data)) {
-            $sessionName = Config::get('session/sessionPrefix') . $data;
+            $sessionName = DEFAULT_SESSION_PREFIX . $data;
             unset($_SESSION[$sessionName]);
             //Debug::error("Session::delete: $sessionName");
 
@@ -100,11 +94,8 @@ class Session
      * destroyed and returned.
      *
      * @param string $name   - Session name to be created or checked
-     * @param string $string - The string to be used if session needs to be
-     *                         created. (optional)
-     *
-     * @return bool|string   - Returns bool if creating, and a string if the
-     *                         check is successful.
+     * @param string $string - The string to be used if session needs to be created. (optional)
+     * @return bool|string   - Returns bool if creating, and a string if the check is successful.
      */
     public static function flash($name, $string = null)
     {

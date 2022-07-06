@@ -1,22 +1,110 @@
 <?php
 /**
- * Classes/Pagination.php
+ * core/template/pagination.php
  *
- * This class is used to generate and manipulate pagination for our database interactions.
+ * This class is for managing template pagination.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
+namespace TempusProjectCore\Template;
 
-namespace TempusProjectCore\Classes;
+use TempusProjectCore\App;
+use TempusProjectCore\Template;
+use TempusProjectCore\Functions\Routes;
+use TempusProjectCore\Functions\Debug;
+use TempusProjectCore\Functions\Input;
+use TempusProjectCore\Classes\Config;
+use TempusProjectCore\Functions\Check;
 
-class Pagination
+class Pagination extends Template
 {
+    private $page = null;
+    private $min = null;
+    private $max = null;
+    
+    /**
+     * This function parses either given html or the current page content and sets
+     * the current active page to selected within an html list.
+     *
+     * @param  string $menu         - The name of the view you wish to add. can be any arbitrary value if $view is
+     *                              provided.
+     * @param  string $selectString - The string/url you are searching for, default model/controller is used if none is
+     *                              provided.
+     * @param  string $view         - The html you want parsed, view is generated from menu name if $view is left blank
+     *
+     * @return string|bool           - returns bool if the menu was added to the page content or
+     *                                 returns the parsed view if one was provided with the
+     *                                 function call.
+     */
+    public static function activePageSelect($menu, $selectString = null, $addToContent = false)
+    {
+        if ($selectString == null) {
+            $selectString = App::$controllerName . '/' . App::$methodName;
+        }
+        $regURL = Routes::getAddress() . $selectString;
+        $regPage = "#\<li(.*)\>\<a(.*)href=\"$regURL\"(.*)\>(.*)\<\/li>#i";
+        $regActive = "<li$1 class=\"active\"><a$2href=\"$regURL\"$3>$4</li>";
+        $view = Views::standardView($menu);
+        if (!preg_match($regPage, $view)) {
+            //if you cannot find the item requested, it will default to the base of the item provided
+            $newURL = explode('/', $selectString);
+            $regURL = Routes::getAddress() . $newURL[0];
+            $regPage = "#\<li(.*)\>\<a(.*)href=\"$regURL\"(.*)\>(.*)\<\/li>#i";
+        }
+        if (!empty($addToContent)) {
+            self::$content .= preg_replace($regPage, $regActive, $view);
+            return true;
+        }
+        $view = preg_replace($regPage, $regActive, $view);
+        return $view;
+    }
+
+    /**
+     * Generates all the information we need to visually
+     * display pagination within the template.
+     */
+    public static function paginate()
+    {
+        $pageData = [];
+        if (Pagination::firstPage() != 1) {
+            $data[1]['ACTIVEPAGE'] = '';
+            $data[1]['PAGENUMBER'] = 1;
+            $data[1]['LABEL'] = 'First';
+            $pageData[1] = (object) $data[1];
+        }
+        for ($x = Pagination::firstPage(); $x < Pagination::lastPage(); $x++) {
+            if ($x == Pagination::currentPage()) {
+                $active = ' class="active"';
+            } else {
+                $active = '';
+            }
+            $data[$x]['ACTIVEPAGE'] = $active;
+            $data[$x]['PAGENUMBER'] = $x;
+            $data[$x]['LABEL'] = $x;
+            $pageData[$x] = (object) $data[$x];
+        }
+        if (Pagination::lastPage() <= Pagination::totalPages()) {
+            $x = Pagination::totalPages();
+            if ($x == Pagination::currentPage()) {
+                $active = ' class="active"';
+            } else {
+                $active = '';
+            }
+            $data[$x]['ACTIVEPAGE'] = $active;
+            $data[$x]['PAGENUMBER'] = $x;
+            $data[$x]['LABEL'] = 'Last';
+            $pageData[$x] = (object) $data[$x];
+        }
+        $pageData = (object) $pageData;
+        if (Pagination::totalPages() <= 1) {
+            Components::set('PAGINATION', '<lb>');
+        } else {
+            Components::set('PAGINATION', Views::standardView('pagination', $pageData));
+        }
+    }
     //The settings that will not change
     public static $paginationSettings = [];
 
@@ -43,7 +131,7 @@ class Pagination
 
         //check for user settings
         if (empty(self::$paginationSettings['perPage'])) {
-            self::$paginationSettings['perPage'] = Config::get('main/pageDefault');
+            self::$paginationSettings['perPage'] = DEFAULT_RESULTS_PER_PAGE;
             if ((!empty(self::$paginationSettings['userPerPage'])) && (self::$paginationSettings['userPerPage'] <= self::$paginationSettings['maxPerPage'])) {
                 self::$paginationSettings['perPage'] = self::$paginationSettings['userPerPage'];
             }
@@ -70,7 +158,7 @@ class Pagination
     {
         Debug::log('Loading Pagination Settings.');
         // hard cap built into system for displaying results
-        self::$paginationSettings['maxPerPage'] = Config::get('main/pageLimit');
+        self::$paginationSettings['maxPerPage'] = MAX_RESULTS_PER_PAGE;
 
         // hard cap built into system retrieving results
         self::$paginationSettings['maxQuery'] = Config::get('database/dbMaxQuery');
@@ -126,7 +214,7 @@ class Pagination
             $start = 0;
         }
         if (empty($end)) {
-            $end = Config::get('main/pageDefault');
+            $end = DEFAULT_RESULTS_PER_PAGE;
         }
         if (empty($total)) {
             $total = 0;

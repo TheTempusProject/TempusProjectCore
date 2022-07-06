@@ -1,21 +1,15 @@
 <?php
 /**
- * Classes/Redirect.php
+ * functions/redirect.php
  *
  * This class is used for header modification and page redirection.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
-namespace TempusProjectCore\Classes;
-
-use TempusProjectCore\Functions\Routes as Routes;
+namespace TempusProjectCore\Functions;
 
 class Redirect
 {
@@ -29,10 +23,11 @@ class Redirect
      */
     public static function to($data)
     {
-        if (Debug::status('redirect')) {
+        if (!Debug::status('redirect')) {
             Debug::warn('Redirect is Disabled in Debugging mode!');
-            exit();
+            return;
         }
+
         if (is_numeric($data)) {
             header('Location: ' . Routes::getAddress() . 'Errors/' . $data);
         } else {
@@ -51,7 +46,7 @@ class Redirect
      */
     public static function reload()
     {
-        if (Debug::status('redirect')) {
+        if (!Debug::status('redirect')) {
             Debug::warn('Redirect is Disabled in Debugging mode!');
             exit();
         }

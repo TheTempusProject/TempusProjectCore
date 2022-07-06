@@ -2,24 +2,149 @@
 /**
  * core/model.php
  *
- * The model provides some very basic functionality for models. These
- * functions exist to prevent errors with installing and uninstalling.
+ * The class provides some basic functionality for models.
  *
- * @version 2.1
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-namespace TempusProjectCore\Core;
+namespace TempusProjectCore;
 
-class Model extends TPCore
+use TempusProjectCore\Functions\Debug;
+use TempusProjectCore\Functions\Routes;
+use TempusProjectCore\Functions\Check;
+
+class Model
 {
-    public static $tableName = "xxxxxx";
-    public static $configName = "xxxxxx";
-    public static $permissions = "xxxxxx";
-    public static $preferences = "xxxxxx";
     public static $enabled = false;
-    
+    const MODEL_VERSION = '0.0.0';
+    public $requiredModels = [];
+    public $configName = '';
+    public $installFlags = [
+        'installDB' => false,
+        'installPermissions' => false,
+        'installConfigs' => false,
+        'installResources' => false,
+        'installPreferences' => false
+    ];
+    public $permissions = '';
+    public $preferences = '';
+
+    /**
+     * Requires the specified folder / model combination and calls
+     * its install function.
+     *
+     * @param  string $folder - The folder containing the model.
+     * @param  string $name   - The 'model.php' you are trying to install.
+     *
+     * @return boolean
+     */
+    public function installModel($name, $folder = null, $flags = null)
+    {
+        Debug::log('Installing Model: ' . $name);
+        $errors = null;
+
+        // Set the model info
+        $node = $this->getNode($name);
+        if ($node === false) {
+            $modelInfo = [
+                'name' => $name,
+                'installDate' => time(),
+                'lastUpdate' => time(),
+                'installStatus' => 'not installed',
+                'currentVersion' => $this->getModelVersion($name)
+            ];
+        } else {
+            $modelInfo = $node;
+        }
+
+        // Check for installer flags, currently reequired for alll models.
+        $installTypes = ['installDB', 'installPermissions', 'installConfigs', 'installResources', 'installPreferences'];
+        if (method_exists($docroot->className, 'installFlags')) {
+            $modelFlags = call_user_func_array([$docroot->className, 'installFlags'], []);
+        } else {
+            foreach ($installTypes as $type) {
+                $modelFlags[$type] = false;
+            }
+        }
+
+        // Determine the modules that can and should be installed.
+        // This is the safeguard for when a model doesn't have an installer you are requiring
+        foreach ($installTypes as $type) {
+            if (!isset($flags[$type])) {
+                $finalFlags[$type] = $modelFlags[$type];
+                continue;
+            }
+            if ($flags[$type] == false) {
+                $finalFlags[$type] = $flags[$type];
+                continue;
+            }
+            if ($modelFlags[$type] == false) {
+                Debug::warn("$type cannot be installed due to installFlags on the model.");
+                $finalFlags[$type] = $modelFlags[$type];
+                continue;
+            }
+            $finalFlags[$type] = $flags[$type];
+            continue;
+        }
+        $flags = $finalFlags;
+
+        if ($this->getModelVersion($name) === $modelInfo['currentVersion'] && $modelInfo['installStatus'] === 'installed') {
+            self::$errors = array_merge(self::$errors, ['errorInfo' => "$name has already been successfully installed"]);
+            return true;
+        }
+        foreach ($installTypes as $Type) {
+            if ($flags[$Type] === false) {
+                if (empty($modelInfo[$Type])) {
+                    if ($modelFlags[$Type] === true) {
+                        $modelInfo[$Type] = 'not installed';
+                    } else {
+                        $modelInfo[$Type] = 'skipped';
+                    }
+                }
+                continue;
+            }
+            if (!empty($modelInfo[$Type]) && $modelInfo[$Type] == 'success') {
+                Debug::warn("$Type has already been successfully installed");
+                continue;
+            }
+            if (!method_exists($docroot->className, $Type)) {
+                $errors[] = ['errorInfo' => "$name $Type method not found."];
+                $modelInfo[$Type] = 'not found';
+                continue;
+            }
+            if (!call_user_func_array([$docroot->className, $Type], [])) {
+                $errors[] = ['errorInfo' => "$name failed to execute $Type properly."];
+                $modelInfo[$Type] = 'error';
+                continue;
+            }
+            $modelInfo[$Type] = 'success';
+            continue;
+        }
+        $modelInfo['currentVersion'] = $this->getModelVersion($name);
+        $this->setNode($name, $modelInfo, true);
+        $this->updateInstallStatus($name);
+
+        if ($errors !== null) {
+            $errors[] = ['errorInfo' => "$name did not install properly."];
+            self::$errors = array_merge(self::$errors, $errors);
+            return false;
+        }
+        self::$errors = array_merge(self::$errors, ['errorInfo' => "$name has been installed."]);
+        return true;
+    }
+
+    /**
+     * Installs any resources needed for the model. Resources are generally
+     * database entires or other structure data needed for the mdoel.
+     *
+     * @return bool - The status of the completed install
+     */
+    public function installResources()
+    {
+        return true;
+    }
     /**
      * The model constructor.
      */
@@ -30,100 +155,11 @@ class Model extends TPCore
     }
 
     /**
-     * Returns the current model version.
-     *
-     * @return string - the correct model version
-     */
-    public static function modelVersion()
-    {
-        return '0.0.0';
-    }
-    
-    /**
-     * Returns an array of models required to run this model without error.
-     *
-     * @return array - An array of models
-     */
-    public static function requiredModels()
-    {
-        $required = [];
-        return $required;
-    }
-
-    /**
-     * Tells the installer which types of integrations your model needs to install.
-     *
-     * @return array - Install flags
-     */
-    public static function installFlags()
-    {
-        $flags = [
-            'installDB' => false,
-            'installPermissions' => false,
-            'installConfigs' => false,
-            'installResources' => false,
-            'installPreferences' => false
-        ];
-        return $flags;
-    }
-
-    /**
      * Tells the installer which types of integrations your model needs to install.
      *
      * @return bool - if the model was loaded without error
      */
-    public static function load()
-    {
-        return true;
-    }
-
-    /**
-     * This function is used to install database structures needed for this model.
-     *
-     * @return boolean - The status of the completed install
-     */
-    public static function installDB()
-    {
-        return true;
-    }
-
-    /**
-     * Install configuration options needed for the model.
-     *
-     * @return bool - If the configurations were added without error
-     */
-    public static function installConfigs()
-    {
-        return true;
-    }
-
-    /**
-     * Installs any resources needed for the model. Resources are generally
-     * database entires or other structure data needed for the mdoel.
-     *
-     * @return bool - The status of the completed install
-     */
-    public static function installResources()
-    {
-        return true;
-    }
-
-    /**
-     * Install preferences needed for the model.
-     *
-     * @return bool - If the preferences were added without error
-     */
-    public static function installPreferences()
-    {
-        return true;
-    }
-
-    /**
-     * Install permissions needed for the model.
-     *
-     * @return bool - If the permissions were added without error
-     */
-    public static function installPermissions()
+    public function load()
     {
         return true;
     }
@@ -136,19 +172,5 @@ class Model extends TPCore
     private static function enabled()
     {
         return self::$enabled;
-    }
-
-    /**
-     * This method will remove all the installed model components.
-     *
-     * @return bool - If the uninstall was completed without error
-     */
-    public static function uninstall()
-    {
-        Preference::removePrefs(self::$preferences, true);
-        Permission::removePerms(self::$permissions, true);
-        Config::removeConfigCategory(self::$configName);
-        self::$db->removeTable(self::$tableName);
-        return true;
     }
 }

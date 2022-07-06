@@ -1,21 +1,17 @@
 <?php
 /**
- * Classes/Code.php
+ * functions/code.php
  *
  * This class is used for creation of custom codes used by the application.
  *
  * @todo    Better code generation.
  *
- * @version 1.0
- *
- * @author  Joey Kimsey <JoeyKimsey@thetempusproject.com>
- *
+ * @version 3.0
+ * @author  Joey Kimsey <Joey@thetempusproject.com>
  * @link    https://TheTempusProject.com/Core
- *
  * @license https://opensource.org/licenses/MIT [MIT LICENSE]
  */
-
-namespace TempusProjectCore\Classes;
+namespace TempusProjectCore\Functions;
 
 class Code
 {

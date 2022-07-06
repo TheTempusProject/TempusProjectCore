@@ -1,0 +1,12 @@
+location /web/www/errors {
+  rewrite ^/web/www/errors/(.*)$ /web/www/index.php?error=$1 break;
+}
+
+location /web/www/ {
+  if ($remote_addr !~ "^127\.0\.0\.1"){
+    rewrite ^/web/www/(.+)$ /web/www/indexParser.php?local=false&url=$1 break;
+  }
+  if (!-e $request_filename){
+    rewrite ^/web/www/(.+)$ /web/www/indexParser.php?missing=true&url=$1 [QSA,L]";;
+  }
+}

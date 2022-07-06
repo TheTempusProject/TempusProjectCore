@@ -1,0 +1,27 @@
+{
+    "main":
+    {
+        "name": "Tempus Project Core",
+        "template": "default",
+        "timezone": "America\/New_York",
+    },
+    "uploads":
+    {
+        "enabled": true,
+        "images": true,
+        "files": true,
+        "maxFileSize": 5242880,
+        "maxImageSize": 2097152
+    },
+    "database":
+    {
+        "dbEnabled": false,
+        "dbType": "mysql",
+        "dbName": "",
+        "dbHost": "",
+        "dbPrefix": "",
+        "dbUsername": "",
+        "dbPassword": "",
+        "dbMaxQuery": 5
+    },
+}
